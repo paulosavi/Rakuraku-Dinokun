@@ -1,6 +1,8 @@
-import { getFrameJQuery } from "./framesLoader.js";
+import { getAllFrames } from "./framesLoader.js";
 
-var dinoFase1EstudandoFrame1 = getFrameJQuery("dinoEstudando", "frame1");
-var dinoFase1EstudandoFrame2 = getFrameJQuery("dinoEstudando", "frame2");
+const readingFrames = await getAllFrames("reading");
+
+var dinoFase1EstudandoFrame1 = readingFrames[0] || $();
+var dinoFase1EstudandoFrame2 = readingFrames[1] || $();
 
 export { dinoFase1EstudandoFrame1, dinoFase1EstudandoFrame2 };

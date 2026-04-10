@@ -1,6 +1,8 @@
-import { getFrameJQuery } from "./framesLoader.js";
+import { getAllFrames } from "./framesLoader.js";
 
-var carinhoFrame1 = getFrameJQuery("dinoCarinho", "frame1");
-var carinhoFrame2 = getFrameJQuery("dinoCarinho", "frame2");
+const caressingFrames = await getAllFrames("caressing");
+
+var carinhoFrame1 = caressingFrames[0] || $();
+var carinhoFrame2 = caressingFrames[1] || $();
 
 export { carinhoFrame1, carinhoFrame2 };

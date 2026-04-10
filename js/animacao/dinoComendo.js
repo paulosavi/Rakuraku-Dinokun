@@ -14,32 +14,23 @@ function comer(lista){
     pararIntervaloSemInteracao(true);
     dinoEstaComendo = true;
 
-    let contador = 1;  
-    let repetir = true;
-    
+    let contador = 0;
+
     const intervalo = setInterval(() =>{
+        $(".pixel").removeClass("preto");
 
         if(contador < lista.length){
-            lista[contador].toggleClass("preto");
+            lista[contador].addClass("preto");
         }
 
-        if(contador === lista.length && repetir === true){
-            $(".pixel").removeClass("preto")
-            lista[0].toggleClass("preto");
-            contador = 0;
-            repetir = false;
-        }
+        contador++;
 
-        if(contador === lista.length - 1 && repetir== false){
+        if(contador >= lista.length){
             clearInterval(intervalo);
             dinoArrotando();
-            return
+            return;
         }
-       
-        contador ++;
-
     }, 1000);
- 
 }
 
 export { comer, dinoEstaComendo, indicarSeDinoEstaComendo }

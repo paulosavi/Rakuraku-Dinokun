@@ -1,9 +1,9 @@
 import { pararDinoTelaPrincipal, telaPrincipal } from "../animacao/dinoFase1Animacao.js";
 import { habilitarEsc, usoDoEsc } from "../principal/telaInicial.js";
-import { getFrameJQuery } from "../frames/framesLoader.js";
+import { getFrame } from "../frames/framesLoader.js";
 
-var luzOn = getFrameJQuery("controles", "luzOn");
-var luzOff = getFrameJQuery("controles", "luzOff");
+var luzOn = await getFrame("switchOn", 0);
+var luzOff = await getFrame("switchOff", 0);
 
 var painelDeLuz = false;
 var estadoAtualDaLuz = true;
@@ -24,7 +24,7 @@ function mostrarPainelDeLuz(bolenano){
 function luz( luzOnOuOff ){
     habilitarEsc(true);
     $(".pixel").removeClass("preto");
-    luzOnOuOff.toggleClass("preto");
+    luzOnOuOff.addClass("preto");
     return
 }
 

@@ -21,14 +21,15 @@ function mostrarlanceDoDino(){
     let indiceAleatorio = Math.floor(Math.random() * 3);
     lanceDoDino = tiposDeLance[indiceAleatorio];
     let contador = 0;
-    
+
     const intervalo = setInterval(()=>{
+        $(".pixel").removeClass("preto");
+
         if(contador == 0){
-           $(".pixel").removeClass("preto");
-           lancesDoDinoFrames[indiceAleatorio].toggleClass("preto");  
+           lancesDoDinoFrames[indiceAleatorio].addClass("preto");
         }
         if(contador == 1){
-            lanceAtualDoJogador.toggleClass("preto");   
+            lanceAtualDoJogador.addClass("preto");
         }
         if(contador == 2){
             clearInterval(intervalo);

@@ -1,4 +1,5 @@
 import { salvarEstado, carregarEstado } from "./saveSystem.js";
+import { agora } from "./relogioInterno.js";
 
 // Stats do pet - valores iniciais (recém-nascido)
 var stats = {
@@ -25,8 +26,8 @@ var stats = {
     causaMorte: "",   // "doenca", "velhice", ""
 
     // Controle de tempo
-    ultimaAtualizacao: Date.now(),
-    nascimento: Date.now()
+    ultimaAtualizacao: agora(),
+    nascimento: agora()
 };
 
 // Limites para morte
@@ -245,8 +246,8 @@ function resetarStats() {
     stats.dietaMassa = 0;
     stats.horasDoente = 0;
     stats.causaMorte = "";
-    stats.ultimaAtualizacao = Date.now();
-    stats.nascimento = Date.now();
+    stats.ultimaAtualizacao = agora();
+    stats.nascimento = agora();
     salvarStats();
 }
 

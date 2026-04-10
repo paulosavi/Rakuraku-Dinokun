@@ -115,10 +115,8 @@ Ao curar doença com remédio: **todos os medidores resetam para zero**.
 - [x] Game loop com cálculo de tempo offline (até 48h acumuladas)
 - [x] Rastreamento de dieta (carne/vegetal/massa) para evolução futura
 - [x] Ciclo de sono básico (21h-9h, flag dormindo)
-- [x] Sistema de frames centralizado em `frames.json` (editável via `editar.html`)
-- [x] Editor visual de frames (`editar.html`) com grid 16×19, pintar/apagar pixels, import/export JSON
-- [x] Loader assíncrono de frames (`framesLoader.js`) com top-level await
-- [x] 6 faces completas de humor (editadas no editor, carregadas do JSON)
+- [x] Sistema de frames organizado em `frames/pixelDino/` (um JSON por animação)
+- [x] Loader assíncrono de frames (`framesLoader.js`) com top-level await e cache
 
 ### Frames de Pixel Art Existentes (fase 1 apenas)
 
@@ -160,22 +158,23 @@ Ao curar doença com remédio: **todos os medidores resetam para zero**.
 
 ### Prioridade 2.5 - Infraestrutura de Frames ✅ CONCLUÍDO
 
-- [x] `frames.json` como fonte de verdade dos pixel arts (100% migrado)
-- [x] Editor visual `editar.html` (carrega `frames.json` automaticamente via fetch)
-- [x] `framesLoader.js` async com `fetch()` + top-level await
-- [x] `necessidadesDinamicas.js` refatorado para carregar do JSON
-- [x] 6 humores editáveis via editor (sem tocar no código)
-- [x] Pratos (4), copos (4), termômetro, peso/idade, estudos no JSON
-- [x] `dinoFase1frames.js` - 4 frames do dino + feliz/raiva/arroto
-- [x] `dinoFase1BanhoFrames.js` - 3 frames do banho
-- [x] `dinoFase1BebendoFrames.js` - 7 frames de beber água
-- [x] `dinoFase1CarinhoFrames.js` - 2 frames de carinho
-- [x] `dinoFase1EstudandoFrames.js` - 2 frames de estudar
-- [x] `dinoFase1MedicarFrames.js` - 4 frames de injeção/remédio
-- [x] `comidasFrames.js` - hambúrguer, macarrão, sorvete, cenoura, maçã, coxa
-- [x] `framesChocarOvo.js` - 20 frames da animação do ovo chocando
-- [x] `luz.js` e `painelDoArCondicionado.js` - frames on/off
-- [x] Arquivo antigo `necessidades.js` removido (substituído por `necessidadesDinamicas.js`)
+- [x] Pasta `frames/pixelDino/` com um JSON por animação (241 arquivos)
+- [x] **Formato de matriz 16×19 (0/1)** - cada arquivo tem `{ frames: [{ id, interval, matrix }] }`
+- [x] `framesLoader.js` async com cache de animações, `fetch()` + top-level await
+- [x] API simplificada: `getFrame(anim, idx)`, `getAllFrames(anim)`, `getFrameMatrix(anim, idx)`
+- [x] Todos os arquivos de frame refatorados para usar a nova API:
+  - `dinoFase1frames.js` → idle (4 frames), sleeping, dirty, sick, deadNeglect
+  - `dinoFase1ReacoesFrame.js` → swallowing, celebrating, losing
+  - `dinoFase1BanhoFrames.js` → bath
+  - `dinoFase1BebendoFrames.js` → drinking
+  - `dinoFase1CarinhoFrames.js` → caressing
+  - `dinoFase1EstudandoFrames.js` → reading
+  - `dinoFase1MedicarFrames.js` → applyingInjection
+  - `comidasFrames.js` → selecting* + eating*
+  - `framesChocarOvo.js` → bornUsaVersion
+  - `luz.js` / `painelDoArCondicionado.js` → switchOn/switchOff
+  - `necessidadesDinamicas.js` → feed0-4, happiness0-5, hydration0-4, school0-4, temperature, weightAge
+- [x] Painel de necessidades super simplificado (telas pré-desenhadas)
 
 ### Prioridade 3 - Ciclos de Vida ✅ CONCLUÍDO
 
@@ -206,26 +205,41 @@ Ao curar doença com remédio: **todos os medidores resetam para zero**.
 
 ## Arquitetura de Frames (infra atual)
 
+### Estrutura de pastas
+
+```
+frames/
+  pixelDino/
+    idle.json
+    sleeping.json
+    bath.json
+    drinking.json
+    ...
+```
+
+Cada arquivo JSON segue o formato:
+
+```json
+{
+  "frames": [
+    { "id": 1, "interval": 1000, "matrix": [[0,0,...], [0,1,...], ...] },
+    { "id": 2, "interval": 1000, "matrix": [[...]] }
+  ]
+}
+```
+
+A `matrix` é 16 linhas × 19 colunas de 0s (pixel apagado) e 1s (pixel aceso).
+
 ### Fluxo de dados
 
 ```
-frames.json (fonte de verdade)
-     ↓ fetch()
-framesLoader.js (top-level await)
-     ↓ getFramePixels()
-necessidadesDinamicas.js (e outros futuros consumidores)
+frames/pixelDino/*.json
+     ↓ fetch() com cache
+framesLoader.js (async + top-level await)
+     ↓ getFrame/getAllFrames/getFrameMatrix
+arquivos de frame do jogo (dinoFase1frames.js, etc.)
      ↓
-renderização na grade 16×19
-```
-
-### Fluxo de edição
-
-```
-editar.html → edita visualmente → Exportar JSON → baixa frames.json
-     ↓
-usuário substitui frames.json no projeto
-     ↓
-recarrega o jogo → alterações aparecem (sem mexer no código)
+animações renderizadas na matriz do jogo
 ```
 
 ### Requisito importante

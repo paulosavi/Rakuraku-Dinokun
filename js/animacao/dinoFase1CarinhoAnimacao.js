@@ -5,21 +5,20 @@ import { fazerCarinho as fazerCarinhoStats } from "../principal/stats.js";
 
 function fazerCarinhoNoDino(){
     estaNatelaPrincipal(false);
-    let contador = 1;
+    const frames = [carinhoFrame1, carinhoFrame2];
+    let contador = 0;
+
     var intervalo = setInterval(() =>{
-        if(contador == 1){  
-            $(".pixel").removeClass("preto");
-            carinhoFrame1.toggleClass("preto");
-        }
-        if(contador === 2){
-            carinhoFrame2.toggleClass("preto");
+        $(".pixel").removeClass("preto");
+        frames[contador].addClass("preto");
+
+        contador++;
+
+        if(contador >= frames.length){
             clearInterval(intervalo);
             fazerCarinhoStats();
             voltarParaTelaPrincipal();
-        }  
-
-        contador ++;
-
+        }
     }, 1050);
 }
 

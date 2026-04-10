@@ -1,5 +1,6 @@
 import { obterStats, degradarStats, alterarStat, salvarStats } from "./stats.js";
 import { carregarEstado } from "./saveSystem.js";
+import { agora, getHoras } from "./relogioInterno.js";
 
 var intervaloGameLoop = null;
 var callbackMorte = null;  // callback chamado quando o pet morre
@@ -19,8 +20,8 @@ function luzEstaAcesa() {
 // e aplica a degradação acumulada (para quando o browser esteve fechado)
 function aplicarTempoOffline() {
     var stats = obterStats();
-    var agora = Date.now();
-    var diferenca = agora - stats.ultimaAtualizacao;
+    var timestampAtual = agora();
+    var diferenca = timestampAtual - stats.ultimaAtualizacao;
     var horasPassadas = Math.floor(diferenca / INTERVALO_HORA);
 
     if (horasPassadas > 0) {
@@ -33,7 +34,7 @@ function aplicarTempoOffline() {
             if (morreu) break;
         }
 
-        alterarStat("ultimaAtualizacao", agora);
+        alterarStat("ultimaAtualizacao", timestampAtual);
         salvarStats();
     }
 }
@@ -41,13 +42,13 @@ function aplicarTempoOffline() {
 // Atualiza a idade baseado no tempo desde o nascimento
 function atualizarIdade() {
     var stats = obterStats();
-    var diasVividos = Math.floor((Date.now() - stats.nascimento) / (INTERVALO_HORA * 24));
+    var diasVividos = Math.floor((agora() - stats.nascimento) / (INTERVALO_HORA * 24));
     alterarStat("idade", diasVividos);
 }
 
 // Checa ciclo de sono baseado na hora real
 function checarSono() {
-    var horaAtual = new Date().getHours();
+    var horaAtual = getHoras();
     var stats = obterStats();
 
     // Dorme entre 21h e 9h
@@ -76,7 +77,7 @@ function tick() {
     checarSono();
     var morreu = degradarStats(luzEstaAcesa());
     atualizarIdade();
-    alterarStat("ultimaAtualizacao", Date.now());
+    alterarStat("ultimaAtualizacao", agora());
     salvarStats();
 
     if (morreu) {

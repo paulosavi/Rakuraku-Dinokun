@@ -1,10 +1,10 @@
 import { deslizarTelaPrincipalParaEsquerda } from "../animacao/dinoFase1Animacao.js";
 import {  deslizarHoraAtualDig1ParaEsqueda, deslizarDoisPontosParaEsqueda,  deslizarPeriodoAtualParaEsqueda, deslizarMinutoAtualDig1ParaEsqueda, deslizarMinutoAtualDig2ParaEsqueda, deslizarHoraAtualDig2ParaEsqueda, deslizarHoraAtualParaEsqueda } from "../relogio/ocultarPainelDoRelogio.js";
+import { getHoras } from "../principal/relogioInterno.js";
 
 
 function deslizarRelogioParaEsquerda(){
-    const data = new Date();
-    const hora = data.getHours();
+    const hora = getHoras();
   
     let horasString = String(hora).split('');
   

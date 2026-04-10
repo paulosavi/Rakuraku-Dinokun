@@ -1,6 +1,7 @@
 import { telaPrincipal } from "../animacao/dinoFase1Animacao.js";
 import { relogio, relogioNaTela } from "../funcoesDosBotoes/clock.js";
 import {  horaFramesDigito2, maisDeNoveHoras, minutosFramesDigito1, minutosFramesDigito2, painelDeHoras, primeiroPeriodo, segundoPeriodo, segundosFramesDigito1, segundosFramesDigito2 } from "../relogio/RelogioFrames.js";
+import { getHoras, getMinutos, getSegundos } from "../principal/relogioInterno.js";
 
 function painelDoRelogio(){
     $(".divs-auxiliar").remove();
@@ -9,10 +10,9 @@ function painelDoRelogio(){
         clearInterval(intervalo);
         return;
       }
-      const data = new Date();
-      const hora = data.getHours();
-      const minutos = data.getMinutes();
-      const segundos = data.getSeconds();
+      const hora = getHoras();
+      const minutos = getMinutos();
+      const segundos = getSegundos();
   
       let horasString = String(hora).split('');
       let horaDig2 = Number(horasString[1]);
@@ -26,7 +26,7 @@ function painelDoRelogio(){
       let segundoDig2 = Number(segundosString[1]);
       
       $(".pixel").removeClass("preto");
-      painelDeHoras.toggleClass("preto");
+      painelDeHoras.addClass("preto");
   
       if(hora <= 11){ primeiroPeriodo.addClass("preto") } else { segundoPeriodo.addClass("preto") };
   

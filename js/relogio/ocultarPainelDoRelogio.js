@@ -1,4 +1,5 @@
 import { horaFramesDigito2, maisDeNoveHoras, minutosFramesDigito1, minutosFramesDigito2, painelDeHoras, primeiroPeriodo, segundoPeriodo, segundosFramesDigito1, segundosFramesDigito2 } from "./RelogioFrames.js";
+import { getHoras, getMinutos } from "../principal/relogioInterno.js";
 
 var horaAtual;
 var horaAtualDig1;
@@ -54,9 +55,8 @@ function deslizarDoisPontosParaEsqueda(){
 
 function ocultarPainelDoRelogio(){
 
-    const data = new Date();
-    const hora = data.getHours();
-    const minutos = data.getMinutes();
+    const hora = getHoras();
+    const minutos = getMinutos();
   
     let horasString = String(hora).split('');
     // let horaDig1 = Number(horasString[0]);

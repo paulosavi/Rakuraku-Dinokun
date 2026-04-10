@@ -3,24 +3,19 @@ import { dinoFase1RaivaFrame } from "../frames/dinoFase1ReacoesFrame.js";
 import { iniciarJokenpo } from "../jogoJokenpo/iniciarJokenpo.js";
 
 function dinoFase1Raiva(){
-
-   let contador = 1;
+   const frames = [dinoFase1Frame1, dinoFase1RaivaFrame, dinoFase1Frame1, dinoFase1RaivaFrame];
+   let contador = 0;
 
    const intervalo = setInterval(()=>{
-       if(contador === 1 || contador === 3){
-           $(".pixel").removeClass("preto");
-           dinoFase1Frame1.toggleClass("preto");
-       }
-       if(contador === 2 || contador === 4){
-           dinoFase1Frame1.toggleClass("preto");
-           dinoFase1RaivaFrame.toggleClass("preto");
-       }
-       if(contador === 5){
+       $(".pixel").removeClass("preto");
+       frames[contador].addClass("preto");
+
+       contador++;
+
+       if(contador >= frames.length){
            clearInterval(intervalo);
            iniciarJokenpo();
-       }  
-
-       contador += 1;
+       }
    }, 1000);
 }
 

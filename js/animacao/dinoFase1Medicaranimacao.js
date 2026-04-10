@@ -4,27 +4,23 @@ import { dinoFase1 } from "./dinoFase1Animacao.js";
 import { estaNatelaPrincipal, voltarParaTelaPrincipal } from "../principal/telaPrincipal.js";
 import { medicar } from "../principal/stats.js";
 
-
- function medicarDinoFase1(){
+function medicarDinoFase1(){
     estaNatelaPrincipal(false);
     let contador = 0;
 
     const intervaloMedicar = setInterval(() =>{
-        if(contador == 0){
-            $(".pixel").removeClass("preto");     
-            injecaoDinoFase1Frames[0].toggleClass("preto");
+        $(".pixel").removeClass("preto");
+        if (contador < injecaoDinoFase1Frames.length) {
+            injecaoDinoFase1Frames[contador].addClass("preto");
         }
-        if(contador > 0 && contador < injecaoDinoFase1Frames.length){     
-            injecaoDinoFase1Frames[contador].toggleClass("preto");
-        }
-        if(contador === 4){
+
+        contador++;
+
+        if(contador >= injecaoDinoFase1Frames.length){
             clearInterval(intervaloMedicar);
             medicar();
             voltarParaTelaPrincipal();
         }
-        
-        contador ++;
-
     }, 1500);
 }
 

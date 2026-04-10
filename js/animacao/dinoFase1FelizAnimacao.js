@@ -4,30 +4,24 @@ import { iniciarJokenpo } from "../jogoJokenpo/iniciarJokenpo.js";
 import { atividade } from "../principal/telaInicial.js"
 import { voltarParaTelaPrincipal } from "../principal/telaPrincipal.js"
 
-
 function dinoFase1Feliz(){
-
-   let contador = 1;
+   const frames = [dinoFase1Frame1, dinoFase1FelizFrame, dinoFase1Frame1, dinoFase1FelizFrame];
+   let contador = 0;
 
    const intervalo = setInterval(()=>{
-       if(contador === 1 || contador === 3){
-           $(".pixel").removeClass("preto");
-           dinoFase1Frame1.toggleClass("preto");
-       }
-       if(contador === 2 || contador === 4){
-           dinoFase1Frame1.toggleClass("preto");
-           dinoFase1FelizFrame.toggleClass("preto");
-       }
-       if(contador === 5){
+       $(".pixel").removeClass("preto");
+       frames[contador].addClass("preto");
+
+       contador++;
+
+       if(contador >= frames.length){
            clearInterval(intervalo);
            if(atividade == "banhar"){
               voltarParaTelaPrincipal();
            } else {
                iniciarJokenpo();
            }
-       }  
-
-       contador += 1;
+       }
    }, 1000);
 }
 

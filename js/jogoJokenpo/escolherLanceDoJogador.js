@@ -27,7 +27,7 @@ function escolherLanceDoJogador(){
     alterarContadorIntervaloSemInteracao(0);
     $(".pixel").removeClass("preto");
     lanceAtualDoJogador = lancesDoJogadorFrames[contadorLanceDoJogador]
-    lanceAtualDoJogador.toggleClass("preto");
+    lanceAtualDoJogador.addClass("preto");
     lanceDoJogador = tiposDeLance[contadorLanceDoJogador];
 }
 

@@ -61,6 +61,146 @@
         
 
     
+    <!-- Painel de Debug (clique no título "Rakuraku Dinokun" para abrir) -->
+    <div id="debug-panel" style="display:none; position:fixed; top:10px; right:10px; background:#1a1a2e; color:#eee; padding:15px; border-radius:8px; z-index:9999; font-family:sans-serif; font-size:12px; width:220px; border:1px solid #334155; max-height:90vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <strong style="color:#7dd3fc;">Debug Stats</strong>
+        <span id="debug-close" style="cursor:pointer; color:#ef4444;">✕</span>
+      </div>
+      <div id="debug-fields"></div>
+      <div style="margin-top:10px; border-top:1px solid #334155; padding-top:8px;">
+        <strong style="color:#7dd3fc; font-size:11px;">Relógio Interno</strong>
+        <div style="display:flex; gap:5px; align-items:center; margin:5px 0;">
+          <input id="dbg-hora" type="number" min="0" max="23" style="width:45px; padding:3px 5px; background:#0f172a; color:#eee; border:1px solid #334155; border-radius:3px; font-size:13px; text-align:center;">
+          <span style="color:#64748b;">:</span>
+          <input id="dbg-minuto" type="number" min="0" max="59" style="width:45px; padding:3px 5px; background:#0f172a; color:#eee; border:1px solid #334155; border-radius:3px; font-size:13px; text-align:center;">
+          <button id="debug-set-clock" style="padding:3px 8px; background:#0284c7; color:#fff; border:none; border-radius:3px; cursor:pointer; font-size:10px;">Definir</button>
+        </div>
+        <div id="debug-clock-display" style="font-size:10px; color:#94a3b8;"></div>
+      </div>
+      <button id="debug-apply" style="width:100%; margin-top:8px; padding:6px; background:#0284c7; color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:11px;">Aplicar Stats</button>
+      <button id="debug-reset" style="width:100%; margin-top:4px; padding:6px; background:#7f1d1d; color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:11px;">Reset (novo jogo)</button>
+      <div id="debug-log" style="margin-top:8px; font-size:10px; color:#94a3b8;"></div>
+    </div>
+
+    <script type="module">
+      import { obterStats, alterarStat, salvarStats, resetarStats, carregarStats } from "./js/principal/stats.js";
+      import { limparEstado } from "./js/principal/saveSystem.js";
+      import { definirHora, getHoras, getMinutos } from "./js/principal/relogioInterno.js";
+
+      const editableStats = [
+        { key: "fome", label: "Fome", min: 0, max: 4, type: "number" },
+        { key: "sede", label: "Sede", min: 0, max: 4, type: "number" },
+        { key: "humor", label: "Humor", min: 0, max: 5, type: "number" },
+        { key: "peso", label: "Peso (kg)", min: 1, max: 100, type: "number" },
+        { key: "idade", label: "Idade (dias)", min: 0, max: 30, type: "number" },
+        { key: "educacao", label: "Educação", min: 0, max: 4, type: "number" },
+        { key: "temperatura", label: "Temperatura", min: 10, max: 40, type: "number" },
+        { key: "doente", label: "Doente", type: "checkbox" },
+        { key: "sujo", label: "Sujo", type: "checkbox" },
+        { key: "dormindo", label: "Dormindo", type: "checkbox" },
+        { key: "vivo", label: "Vivo", type: "checkbox" },
+        { key: "horasDoente", label: "Horas doente", min: 0, max: 24, type: "number" },
+      ];
+
+      function buildDebugFields() {
+        const container = document.getElementById("debug-fields");
+        container.innerHTML = "";
+        const stats = obterStats();
+
+        editableStats.forEach(s => {
+          const row = document.createElement("div");
+          row.style.cssText = "display:flex; justify-content:space-between; align-items:center; margin:3px 0;";
+
+          const lbl = document.createElement("label");
+          lbl.textContent = s.label;
+          lbl.style.cssText = "color:#94a3b8; font-size:11px;";
+
+          const input = document.createElement("input");
+          input.id = "dbg-" + s.key;
+          input.style.cssText = "width:60px; padding:3px 5px; background:#0f172a; color:#eee; border:1px solid #334155; border-radius:3px; font-size:11px; text-align:right;";
+
+          if (s.type === "checkbox") {
+            input.type = "checkbox";
+            input.checked = !!stats[s.key];
+            input.style.width = "auto";
+          } else {
+            input.type = "number";
+            input.min = s.min;
+            input.max = s.max;
+            input.value = stats[s.key] ?? 0;
+          }
+
+          row.appendChild(lbl);
+          row.appendChild(input);
+          container.appendChild(row);
+        });
+      }
+
+      function refreshFields() {
+        const stats = obterStats();
+        editableStats.forEach(s => {
+          const input = document.getElementById("dbg-" + s.key);
+          if (!input) return;
+          if (s.type === "checkbox") input.checked = !!stats[s.key];
+          else input.value = stats[s.key] ?? 0;
+        });
+      }
+
+      document.getElementById("debug-apply").addEventListener("click", () => {
+        editableStats.forEach(s => {
+          const input = document.getElementById("dbg-" + s.key);
+          if (!input) return;
+          const val = s.type === "checkbox" ? input.checked : Number(input.value);
+          alterarStat(s.key, val);
+        });
+        salvarStats();
+        document.getElementById("debug-log").textContent = "✓ Stats aplicados! (" + new Date().toLocaleTimeString() + ")";
+      });
+
+      document.getElementById("debug-reset").addEventListener("click", () => {
+        if (!confirm("Resetar tudo e começar novo jogo?")) return;
+        limparEstado();
+        location.reload();
+      });
+
+      document.getElementById("debug-close").addEventListener("click", () => {
+        document.getElementById("debug-panel").style.display = "none";
+      });
+
+      document.getElementById("debug-set-clock").addEventListener("click", () => {
+        const h = parseInt(document.getElementById("dbg-hora").value) || 0;
+        const m = parseInt(document.getElementById("dbg-minuto").value) || 0;
+        definirHora(h, m);
+        document.getElementById("debug-log").textContent = "✓ Relógio definido para " + h + ":" + String(m).padStart(2, "0") + " (" + new Date().toLocaleTimeString() + ")";
+      });
+
+      // Toggle do painel: clique no título
+      document.querySelector(".corpo-tamagotchi-img")?.addEventListener("dblclick", () => {
+        const panel = document.getElementById("debug-panel");
+        if (panel.style.display === "none") {
+          buildDebugFields();
+          panel.style.display = "block";
+        } else {
+          panel.style.display = "none";
+        }
+      });
+
+      // Atualiza campos a cada 2s se o painel está aberto
+      setInterval(() => {
+        if (document.getElementById("debug-panel").style.display !== "none") {
+          refreshFields();
+          // Mostra hora interna atual
+          const h = getHoras();
+          const m = getMinutos();
+          document.getElementById("debug-clock-display").textContent =
+            "Hora interna: " + String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+          document.getElementById("dbg-hora").placeholder = h;
+          document.getElementById("dbg-minuto").placeholder = m;
+        }
+      }, 2000);
+    </script>
+
     <script type="module" src="./js/principal/jquery.js"></script>
     <script type="module" src="//code.jquery.com/jquery-1.11.0.min.js"></script>
     <script type="module" src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>

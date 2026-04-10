@@ -1,54 +1,83 @@
-// Carregador de frames a partir do frames.json
-// Usa top-level await: todos os módulos que importarem daqui vão aguardar
-// o JSON ser carregado antes de executarem seus corpos.
+// Carregador de frames - cada animação é um JSON separado em frames/pixelDino/
+// Formato: { frames: [ { id, interval, matrix } ] }
+// matrix: 16x19 de 0s e 1s
 //
 // IMPORTANTE: precisa rodar via servidor local (Live Server, etc.)
 // pois fetch() não funciona com file:// na maioria dos browsers.
 
-let FRAMES_DATA = {};
+const cache = {};
 
-try {
-    const response = await fetch("frames.json");
-    if (response.ok) {
-        FRAMES_DATA = await response.json();
-        console.log("✓ frames.json carregado com sucesso");
-    } else {
-        console.error("Falha ao carregar frames.json:", response.status);
+/**
+ * Carrega uma animação pelo nome (ex: "idle", "sleeping")
+ * Retorna { frames: [...] }
+ */
+async function loadAnimation(animName) {
+    if (cache[animName]) return cache[animName];
+
+    const url = "frames/pixelDino/" + animName + ".json";
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            console.error("Falha ao carregar " + url + ":", response.status);
+            cache[animName] = { frames: [] };
+            return cache[animName];
+        }
+        const data = await response.json();
+        cache[animName] = data;
+        return data;
+    } catch (e) {
+        console.error("Erro ao buscar " + url + ":", e);
+        cache[animName] = { frames: [] };
+        return cache[animName];
     }
-} catch (e) {
-    console.error("Erro ao buscar frames.json:", e);
-    console.warn("Certifique-se de estar rodando via servidor local (Live Server, etc.)");
 }
 
 /**
- * Retorna a string bruta de pixels do frame (ex: "B03,B09,C03,...")
+ * Converte uma matriz 16x19 em objeto jQuery selecionando os pixels acesos
  */
-function getFrameString(category, name) {
-    if (FRAMES_DATA[category] && FRAMES_DATA[category][name] !== undefined) {
-        return FRAMES_DATA[category][name];
+function matrixToJQuery(matrix) {
+    if (!matrix || !Array.isArray(matrix)) return $();
+    const pixels = [];
+    for (let r = 0; r < matrix.length; r++) {
+        const row = matrix[r];
+        if (!Array.isArray(row)) continue;
+        for (let c = 0; c < row.length; c++) {
+            if (row[c] === 1) {
+                const letter = String.fromCharCode(65 + r); // A-P
+                const colStr = (c + 1).toString().padStart(2, "0"); // 01-19
+                pixels.push("." + letter + colStr);
+            }
+        }
     }
-    console.warn("Frame não encontrado:", category + "/" + name);
-    return "";
-}
-
-/**
- * Retorna um array de classes de pixel (ex: ["B03", "B09", "C03"])
- */
-function getFramePixels(category, name) {
-    const str = getFrameString(category, name);
-    if (!str) return [];
-    return str.split(",").map(function(s) { return s.trim(); }).filter(Boolean);
-}
-
-/**
- * Retorna um objeto jQuery que seleciona todos os pixels do frame
- * (usa a sintaxe ".B03, .B09, .C03, ...")
- */
-function getFrameJQuery(category, name) {
-    const pixels = getFramePixels(category, name);
     if (pixels.length === 0) return $();
-    const selectors = pixels.map(function(p) { return "." + p; }).join(", ");
-    return $(selectors);
+    return $(pixels.join(", "));
 }
 
-export { FRAMES_DATA, getFrameString, getFramePixels, getFrameJQuery };
+/**
+ * Retorna um frame específico como objeto jQuery
+ */
+async function getFrame(animName, frameIdx) {
+    const data = await loadAnimation(animName);
+    if (!data.frames || !data.frames[frameIdx]) return $();
+    return matrixToJQuery(data.frames[frameIdx].matrix);
+}
+
+/**
+ * Retorna TODOS os frames de uma animação como array de objetos jQuery
+ */
+async function getAllFrames(animName) {
+    const data = await loadAnimation(animName);
+    if (!data.frames) return [];
+    return data.frames.map(function(f) { return matrixToJQuery(f.matrix); });
+}
+
+/**
+ * Retorna a matriz bruta de um frame (útil para manipulação direta)
+ */
+async function getFrameMatrix(animName, frameIdx) {
+    const data = await loadAnimation(animName);
+    if (!data.frames || !data.frames[frameIdx]) return null;
+    return data.frames[frameIdx].matrix;
+}
+
+export { loadAnimation, matrixToJQuery, getFrame, getAllFrames, getFrameMatrix };

@@ -1,5 +1,6 @@
 import {
-    dinoFase1Frame1, dinoFase1Frame2, dinoFase1Frame3, dinoFase1Frame4,
+    idleFrames,
+    dinoFase1Frame1,
     dinoDormindoFrame, dinoSujoFrame, dinoDoenteFrame, dinoMortoFrame
 } from "../frames/dinoFase1frames.js";
 import { obterStats } from "../principal/stats.js";
@@ -17,10 +18,14 @@ function deslizarTelaPrincipalParaEsquerda(){
     frameAtualTelaPrincipal = frameAtualTelaPrincipal.prev().addClass("preto");
 }
 
-const framesDinoFase1 = [dinoFase1Frame1, dinoFase1Frame2, dinoFase1Frame3, dinoFase1Frame2, dinoFase1Frame4];
-const framesDoente = [dinoDoenteFrame, dinoDoenteFrame];  // estático, só repete
-const framesSujo = [dinoSujoFrame, dinoSujoFrame];
-const framesDormindo = [dinoDormindoFrame, dinoDormindoFrame];
+// Animação idle: usa todos os 5 frames do Remagotchi
+// centro → bounce → esquerda → bounce → direita
+const framesDinoFase1 = idleFrames;
+
+// Estados passivos usam 2 frames iguais (ficam estáticos)
+const framesDoente = [dinoDoenteFrame];
+const framesSujo = [dinoSujoFrame];
+const framesDormindo = [dinoDormindoFrame];
 const framesMorto = [dinoMortoFrame];
 
 // Retorna os frames corretos baseado no estado atual do pet
@@ -35,39 +40,27 @@ function getFramesAtuais() {
 }
 
 function dinoFase1(boleano) {
-        telaPrincipal = boleano;
-        let contador = 0;
-        let piscaAlerta = false;
-        const intervalo = setInterval(() => {
-            if(!telaPrincipal){
-                clearInterval(intervalo);
-                return
-            }
+    telaPrincipal = boleano;
+    let contador = 0;
 
-            var stats = obterStats();
-            var frames = getFramesAtuais();
+    const intervalo = setInterval(() => {
+        if(!telaPrincipal){
+            clearInterval(intervalo);
+            return;
+        }
 
-            $(".pixel").removeClass("preto");
+        var frames = getFramesAtuais();
 
-            // Pisca (efeito de alerta) quando precisa urgente de atenção
-            // Só pisca se estiver vivo; quando morto, frame fica estático
-            var precisaAtencao = stats.vivo && (stats.fome === 0 || stats.sede === 0 || stats.doente);
+        $(".pixel").removeClass("preto");
+        if (frames.length > 0) {
+            frameAtualTelaPrincipal = frames[contador % frames.length].addClass("preto");
+        }
 
-            if (precisaAtencao && piscaAlerta) {
-                // Frame escondido (tela vazia) para efeito de piscada
-                piscaAlerta = false;
-            } else {
-                frameAtualTelaPrincipal = frames[contador % frames.length].addClass("preto");
-                piscaAlerta = precisaAtencao;
-            }
-
-            contador ++;
-            if(contador >= frames.length){
-                contador = 0;
-            }
-
-        }, 1000);
-
+        contador++;
+        if(contador >= frames.length){
+            contador = 0;
+        }
+    }, 1000);
 }
 
 export {

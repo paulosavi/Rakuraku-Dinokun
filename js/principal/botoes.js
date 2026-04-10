@@ -4,7 +4,7 @@ import { botaoEsc } from "../funcoesDosBotoes/esc.js";
 import { botaoIniciar } from "../funcoesDosBotoes/iniciarJogo.js";
 import { botaoDireito } from "../funcoesDosBotoes/botaoSelecaoDireita/selecaoDireita.js";
 import { botaoEsquerdo } from "../funcoesDosBotoes/botaoSelecaoEsqueda/selecaoEsquerda.js";
-import { carregarEstado, limparEstado } from "./saveSystem.js";
+import { carregarEstado } from "./saveSystem.js";
 import { dinoFase1, pararDinoTelaPrincipal } from "../animacao/dinoFase1Animacao.js";
 import { alterarEstadoAtualDaLuz } from "../outrosRecursos/luz.js";
 import { alterarEstadoAtualDoArcondicionado } from "../outrosRecursos/painelDoArCondicionado.js";
@@ -36,7 +36,8 @@ function aoMorrer() {
         $(".pixel").removeClass("preto");
         $("#img-chavinha").fadeIn(1000);
         $("#iniciar-jogo").fadeIn(1000);
-        limparEstado();
+        // NÃO limpa o estado inteiro - senão perde jogoIniciado no F5
+        // O resetarStats() dentro de iniciarJogo já cuida de zerar os stats
         $("#iniciar-jogo").one("click", botaoIniciar);
     }, 5000);
 }

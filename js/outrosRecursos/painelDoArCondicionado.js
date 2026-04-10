@@ -1,8 +1,8 @@
 import { habilitarEsc, usoDoEsc } from "../principal/telaInicial.js";
-import { getFrameJQuery } from "../frames/framesLoader.js";
+import { getFrame } from "../frames/framesLoader.js";
 
-var arcondicionadoOn = getFrameJQuery("controles", "arOn");
-var arcondicionadoOff = getFrameJQuery("controles", "arOff");
+var arcondicionadoOn = await getFrame("switchOn", 0);
+var arcondicionadoOff = await getFrame("switchOff", 0);
 
 var painelDoArcondicionado = false;
 var estadoAtualDoArcondicionado = "ligar";
@@ -18,7 +18,7 @@ function mostrarPainelDoArcondionado(bolenano){
 function arcondicionado( painel ){
     habilitarEsc(true);
     $(".pixel").removeClass("preto");
-    painel.toggleClass("preto");
+    painel.addClass("preto");
     return
 }
 

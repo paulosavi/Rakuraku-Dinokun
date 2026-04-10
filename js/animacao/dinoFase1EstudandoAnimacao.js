@@ -5,28 +5,22 @@ import { estaNatelaPrincipal, voltarParaTelaPrincipal } from "../principal/telaP
 import { estudar } from "../principal/stats.js";
 
 function dinoFase1Estudando(){
-    estaNatelaPrincipal(false)
-    let contador = 1;
+    estaNatelaPrincipal(false);
+    const frames = [dinoFase1EstudandoFrame1, dinoFase1EstudandoFrame2, dinoFase1EstudandoFrame2, dinoFase1EstudandoFrame1];
+    let contador = 0;
 
     var intervalo = setInterval(() =>{
-        if(contador === 1){
-            $(".pixel").removeClass("preto");
-            dinoFase1EstudandoFrame1.toggleClass("preto");
-        }
-        if(contador > 1 && contador <= 3){
-            dinoFase1EstudandoFrame2.toggleClass("preto");
-        }
-        if(contador === 4){
-            dinoFase1EstudandoFrame2.toggleClass("preto");
+        $(".pixel").removeClass("preto");
+        frames[contador].addClass("preto");
+
+        contador++;
+
+        if(contador >= frames.length){
             clearInterval(intervalo);
             estudar();
             voltarParaTelaPrincipal();
-        }   
-
-        contador ++;
-
+        }
     }, 1050);
 }
 
 export { dinoFase1Estudando }
-
