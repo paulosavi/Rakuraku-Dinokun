@@ -50,6 +50,8 @@ function resetParaTeste() {
     alterarStat("humor", 5);
     alterarStat("peso", 1);
     alterarStat("comidaPendente", 0);
+    alterarStat("limiteDoenca", 0);
+    alterarStat("horasDoente", 0);
 }
 
 // ============================================
@@ -247,6 +249,44 @@ resetParaTeste();
 alterarStat("dormindo", true);
 degradarStats(false, "ligar", 10);
 assert(obterStats().doente === false, "Luz apagada dormindo: doente = false");
+
+// ============================================
+console.log("\n\x1b[36m=== TESTE 11: Morte por doenca - timer aleatorio ===\x1b[0m");
+// ============================================
+// Timer deve ser entre 1 e 8 horas
+let timersVistos = new Set();
+for (let i = 0; i < 200; i++) {
+    resetParaTeste();
+    alterarStat("doente", true);
+    degradarStats(true, "ligar", 10); // primeiro tick seta o limiteDoenca
+    timersVistos.add(obterStats().limiteDoenca);
+}
+assert(timersVistos.size > 1, `Timer aleatorio: viu ${timersVistos.size} valores diferentes (${[...timersVistos].sort().join(",")})`);
+const todosEntreRange = [...timersVistos].every(t => t >= 1 && t <= 8);
+assert(todosEntreRange, `Timer range: todos entre 1-8 (${[...timersVistos].sort().join(",")})`);
+
+// Pet deve morrer quando horasDoente >= limiteDoenca
+resetParaTeste();
+alterarStat("doente", true);
+alterarStat("limiteDoenca", 2); // vai morrer em 2 horas
+alterarStat("horasDoente", 0);
+let morreu = degradarStats(true, "ligar", 10); // hora 1
+assert(morreu === false, "Doente 1/2 horas: ainda vivo");
+assert(obterStats().vivo === true, "Doente 1/2 horas: vivo = true");
+morreu = degradarStats(true, "ligar", 11); // hora 2
+assert(morreu === true, "Doente 2/2 horas: morreu");
+assert(obterStats().vivo === false, "Doente 2/2 horas: vivo = false");
+
+// Curar doenca reseta timer
+resetParaTeste();
+alterarStat("doente", true);
+degradarStats(true, "ligar", 10); // seta limiteDoenca
+assert(obterStats().limiteDoenca > 0, "Doente: limiteDoenca > 0");
+medicar();
+assert(obterStats().horasDoente === 0, "Apos medicar: horasDoente = 0");
+// limiteDoenca reseta no proximo tick quando nao esta mais doente
+degradarStats(true, "ligar", 11);
+assert(obterStats().limiteDoenca === 0, "Apos curar + tick: limiteDoenca = 0");
 
 // ============================================
 // RESULTADO FINAL

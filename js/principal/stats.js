@@ -28,6 +28,7 @@ var stats = {
 
     // Contadores de doença/morte
     horasDoente: 0,   // quantas horas está doente sem ser tratado
+    limiteDoenca: 0,  // horas até morrer (definido aleatoriamente ao ficar doente)
     causaMorte: "",   // "doenca", "velhice", ""
 
     // Controle de tempo
@@ -36,7 +37,7 @@ var stats = {
 };
 
 // Limites para morte
-const LIMITE_HORAS_DOENTE = 12;   // 12h doente sem remédio = morte
+// Timer de doença é aleatório (1-8 horas) conforme original
 const IDADE_MAXIMA_DIAS = 20;     // 20 dias de vida = morte por velhice
 
 // Nomes dos níveis de educação
@@ -229,15 +230,20 @@ function degradarStats(estadoLuz, estadoAC, hora) {
         }
     }
 
-    // Contador de doença - incrementa se doente
+    // Contador de doença - timer aleatório conforme original
     if (stats.doente) {
+        // Ao ficar doente pela primeira vez, sorteia o limite (1-8 horas)
+        if (stats.limiteDoenca === 0) {
+            stats.limiteDoenca = Math.floor(Math.random() * 8) + 1;
+        }
         stats.horasDoente += 1;
-        if (stats.horasDoente >= LIMITE_HORAS_DOENTE) {
+        if (stats.horasDoente >= stats.limiteDoenca) {
             matarPet("doenca");
             return true;
         }
     } else {
         stats.horasDoente = 0;
+        stats.limiteDoenca = 0;
     }
 
     // Morte por velhice
@@ -284,6 +290,7 @@ function resetarStats() {
     stats.dietaMassa = 0;
     stats.comidaPendente = 0;
     stats.horasDoente = 0;
+    stats.limiteDoenca = 0;
     stats.causaMorte = "";
     stats.ultimaAtualizacao = agora();
     stats.nascimento = agora();
@@ -308,6 +315,5 @@ export {
     NIVEIS_EDUCACAO,
     NIVEIS_HUMOR,
     DIETA_COMIDA,
-    LIMITE_HORAS_DOENTE,
     IDADE_MAXIMA_DIAS
 }
