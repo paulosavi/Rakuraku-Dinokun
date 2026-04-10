@@ -10,7 +10,8 @@ var stats = {
     idade: 0,         // dias desde o nascimento
     educacao: 0,      // 0-4 (E+, D+, C+, B+, A+)
     temperatura: 25,  // graus, ideal = 25
-    faseEvolucao: 1,  // 1 = bebê, 2 = criança, 3 = adolescente, 4 = adulto
+    faseEvolucao: 1,  // 1 = bebê, 2 = filhote, 3/5/7/9 = evoluções
+    caminhoEvolucao: "", // "tyrannosaurus", "triceratops", "brontosaurus"
     doente: false,    // se está doente (cura: remédio)
     comFrio: false,   // temp < 20°C (cura: desligar AC)
     comCalor: false,  // temp > 30°C (cura: ligar AC)
@@ -39,6 +40,46 @@ var stats = {
 // Limites para morte
 // Timer de doença é aleatório (1-8 horas) conforme original
 const IDADE_MAXIMA_DIAS = 20;     // 20 dias de vida = morte por velhice
+
+// Evolução: fases e thresholds de peso
+// Fase 1 = bebê, fase 2 = filhote, fases 3-9 = evoluções por dieta
+const EVOLUCAO_THRESHOLDS = [
+    { fase: 2, pesoMinimo: 15 },
+    { fase: 3, pesoMinimo: 30 },
+    { fase: 5, pesoMinimo: 50 },
+    { fase: 7, pesoMinimo: 70 },
+    { fase: 9, pesoMinimo: 90 }
+];
+
+// Dieta determina o caminho de evolução a partir da fase 3
+// carne → tyrannosaurus, vegetal → triceratops, massa/misto → brontosaurus
+function determinarCaminhoEvolucao() {
+    var maior = Math.max(stats.dietaCarne, stats.dietaVegetal, stats.dietaMassa);
+    if (maior === 0) return "brontosaurus"; // sem preferência = brontosaurus
+    if (stats.dietaCarne >= stats.dietaVegetal && stats.dietaCarne >= stats.dietaMassa) return "tyrannosaurus";
+    if (stats.dietaVegetal >= stats.dietaCarne && stats.dietaVegetal >= stats.dietaMassa) return "triceratops";
+    return "brontosaurus";
+}
+
+// Checa se o pet deve evoluir (chamada ao acordar às 9h)
+// Retorna true se evoluiu
+function checarEvolucao() {
+    if (!stats.vivo) return false;
+
+    for (var i = EVOLUCAO_THRESHOLDS.length - 1; i >= 0; i--) {
+        var ev = EVOLUCAO_THRESHOLDS[i];
+        if (stats.peso >= ev.pesoMinimo && stats.faseEvolucao < ev.fase) {
+            stats.faseEvolucao = ev.fase;
+            // A partir da fase 3, define o caminho por dieta
+            if (ev.fase >= 3) {
+                stats.caminhoEvolucao = determinarCaminhoEvolucao();
+            }
+            salvarStats();
+            return true;
+        }
+    }
+    return false;
+}
 
 // Nomes dos níveis de educação
 const NIVEIS_EDUCACAO = ["E+", "D+", "C+", "B+", "A+"];
@@ -279,6 +320,7 @@ function resetarStats() {
     stats.educacao = 0;
     stats.temperatura = 25;
     stats.faseEvolucao = 1;
+    stats.caminhoEvolucao = "";
     stats.doente = false;
     stats.comFrio = false;
     stats.comCalor = false;
@@ -315,5 +357,7 @@ export {
     NIVEIS_EDUCACAO,
     NIVEIS_HUMOR,
     DIETA_COMIDA,
-    IDADE_MAXIMA_DIAS
+    IDADE_MAXIMA_DIAS,
+    checarEvolucao,
+    EVOLUCAO_THRESHOLDS
 }

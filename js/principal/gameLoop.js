@@ -1,6 +1,7 @@
-import { obterStats, degradarStats, alterarStat, salvarStats } from "./stats.js";
+import { obterStats, degradarStats, alterarStat, salvarStats, checarEvolucao } from "./stats.js";
 import { carregarEstado } from "./saveSystem.js";
 import { agora, getHoras, getDate } from "./relogioInterno.js";
+import { recarregarFramesParaFaseAtual } from "../frames/dinoFase1frames.js";
 
 var intervaloGameLoop = null;
 var callbackMorte = null;  // callback chamado quando o pet morre
@@ -69,7 +70,12 @@ function checarSono() {
         }
     } else {
         if (stats.dormindo) {
+            // Acorda às 9h — checa evolução (conforme original)
             alterarStat("dormindo", false);
+            var evoluiu = checarEvolucao();
+            if (evoluiu) {
+                recarregarFramesParaFaseAtual();
+            }
             salvarStats();
         }
     }

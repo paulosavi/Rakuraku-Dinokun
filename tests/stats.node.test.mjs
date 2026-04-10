@@ -21,7 +21,7 @@ globalThis.$ = jqFn;
 globalThis.jQuery = jqFn;
 
 // === IMPORTS ===
-const { obterStats, alterarStat, degradarStats, salvarStats, resetarStats, alimentar, darAgua, medicar, resultadoJokenpo } = await import("../js/principal/stats.js");
+const { obterStats, alterarStat, degradarStats, salvarStats, resetarStats, alimentar, darAgua, medicar, resultadoJokenpo, checarEvolucao } = await import("../js/principal/stats.js");
 
 // === TEST RUNNER ===
 let passed = 0;
@@ -287,6 +287,58 @@ assert(obterStats().horasDoente === 0, "Apos medicar: horasDoente = 0");
 // limiteDoenca reseta no proximo tick quando nao esta mais doente
 degradarStats(true, "ligar", 11);
 assert(obterStats().limiteDoenca === 0, "Apos curar + tick: limiteDoenca = 0");
+
+// ============================================
+console.log("\n\x1b[36m=== TESTE 12: Evolucao por peso ===\x1b[0m");
+// ============================================
+resetParaTeste();
+alterarStat("peso", 10);
+let ev = checarEvolucao();
+assert(ev === false, "Peso 10: nao evolui (precisa 15)");
+assert(obterStats().faseEvolucao === 1, "Peso 10: fase 1");
+
+alterarStat("peso", 15);
+ev = checarEvolucao();
+assert(ev === true, "Peso 15: evolui pra fase 2");
+assert(obterStats().faseEvolucao === 2, "Peso 15: fase 2");
+
+alterarStat("peso", 30);
+alterarStat("dietaCarne", 5);
+alterarStat("dietaVegetal", 1);
+alterarStat("dietaMassa", 1);
+ev = checarEvolucao();
+assert(ev === true, "Peso 30 + dieta carne: evolui pra fase 3");
+assert(obterStats().faseEvolucao === 3, "Peso 30: fase 3");
+assert(obterStats().caminhoEvolucao === "tyrannosaurus", `Dieta carne: caminho = ${obterStats().caminhoEvolucao}`);
+
+resetParaTeste();
+alterarStat("peso", 30);
+alterarStat("faseEvolucao", 2);
+alterarStat("dietaVegetal", 5);
+alterarStat("dietaCarne", 1);
+alterarStat("dietaMassa", 1);
+ev = checarEvolucao();
+assert(obterStats().caminhoEvolucao === "triceratops", `Dieta vegetal: caminho = ${obterStats().caminhoEvolucao}`);
+
+resetParaTeste();
+alterarStat("peso", 30);
+alterarStat("faseEvolucao", 2);
+alterarStat("dietaMassa", 5);
+alterarStat("dietaCarne", 1);
+alterarStat("dietaVegetal", 1);
+ev = checarEvolucao();
+assert(obterStats().caminhoEvolucao === "brontosaurus", `Dieta massa: caminho = ${obterStats().caminhoEvolucao}`);
+
+// Evolucao pula fases se peso for alto o suficiente
+resetParaTeste();
+alterarStat("peso", 90);
+alterarStat("dietaCarne", 5);
+ev = checarEvolucao();
+assert(obterStats().faseEvolucao === 9, `Peso 90 de uma vez: fase = ${obterStats().faseEvolucao}`);
+
+// Nao evolui se ja esta na fase certa
+ev = checarEvolucao();
+assert(ev === false, "Ja na fase 9: nao evolui de novo");
 
 // ============================================
 // RESULTADO FINAL
