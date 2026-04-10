@@ -1,6 +1,6 @@
 import { obterStats, degradarStats, alterarStat, salvarStats } from "./stats.js";
 import { carregarEstado } from "./saveSystem.js";
-import { agora, getHoras } from "./relogioInterno.js";
+import { agora, getHoras, getDate } from "./relogioInterno.js";
 
 var intervaloGameLoop = null;
 var callbackMorte = null;  // callback chamado quando o pet morre
@@ -16,6 +16,12 @@ function luzEstaAcesa() {
     return estado && estado.estadoLuz === true;
 }
 
+// Retorna o estado do ar condicionado ("ligar" ou "desligar")
+function estadoDoAC() {
+    var estado = carregarEstado();
+    return estado && estado.estadoAC ? estado.estadoAC : "desligar";
+}
+
 // Checa quantas horas passaram desde a última atualização
 // e aplica a degradação acumulada (para quando o browser esteve fechado)
 function aplicarTempoOffline() {
@@ -27,9 +33,13 @@ function aplicarTempoOffline() {
     if (horasPassadas > 0) {
         horasPassadas = Math.min(horasPassadas, 48);
         var estadoLuz = luzEstaAcesa();
+        var ac = estadoDoAC();
 
+        // Simula cada hora com o horário correto do relógio
+        var horaInicio = new Date(stats.ultimaAtualizacao).getHours();
         for (var i = 0; i < horasPassadas; i++) {
-            var morreu = degradarStats(estadoLuz);
+            var horaSimulada = (horaInicio + i + 1) % 24;
+            var morreu = degradarStats(estadoLuz, ac, horaSimulada);
             atualizarIdade();
             if (morreu) break;
         }
@@ -75,7 +85,7 @@ function tick() {
     }
 
     checarSono();
-    var morreu = degradarStats(luzEstaAcesa());
+    var morreu = degradarStats(luzEstaAcesa(), estadoDoAC(), getHoras());
     atualizarIdade();
     alterarStat("ultimaAtualizacao", agora());
     salvarStats();

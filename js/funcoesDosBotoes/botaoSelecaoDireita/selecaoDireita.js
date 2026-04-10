@@ -5,7 +5,7 @@ import { alterarEstadoAtualDoArcondicionado, arcondicionado, arcondicionadoOff, 
 import { selecaoDireita, percorrerIconesDaDireita, iconeDaDireita, contadorSelecaoDireita } from "../botaoSelecaoDireita/percorreInconesDaDireita.js";
 import { alterarContadorComida, comidaAtual, contadorComida, enterComida, opcoesDeComida, percorrerComida, permitirComerComida, permitirPercorrerComidas } from "../../outrosRecursos/opcoesDeComida.js";
 import { entrarNoJogo, estaDentroDoJogo } from "../../jogoJokenpo/iniciarJokenpo.js";
-import { alterarContadorLanceDoJogador, contadorLanceDoJogador, escolherLanceDoJogador } from "../../jogoJokenpo/escolherLanceDoJogador.js";
+import { alterarContadorLanceDoJogador, contadorLanceDoJogador, escolherLanceDoJogador, vezDoJogador } from "../../jogoJokenpo/escolherLanceDoJogador.js";
 import { percorreOpcoesAhDireita } from "./percorrerOpcoesAhDireita.js";
 import { obterStats } from "../../principal/stats.js";
 
@@ -31,7 +31,7 @@ function botaoDireito(){
         alterarEstadoAtualDoArcondicionado("desligar");
         arcondicionado(arcondicionadoOff);
     }
-    if(estaDentroDoJogo){
+    if(estaDentroDoJogo && vezDoJogador){
         percorreOpcoesAhDireita(escolherLanceDoJogador, contadorLanceDoJogador, alterarContadorLanceDoJogador, 2);
     }
 }

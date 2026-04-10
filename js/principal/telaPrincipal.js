@@ -1,4 +1,5 @@
 import { dinoFase1 } from "../animacao/dinoFase1Animacao.js";
+import { obterStats } from "./stats.js";
 import { habilitarEsc, habilitarEventosIniciais, usoDoEsc } from "./telaInicial.js";
 import { enterComida, percorrerComida, permitirComerComida, permitirPercorrerComidas } from "../outrosRecursos/opcoesDeComida.js";
 import { estadoAtualDaLuz, mostrarPainelDeLuz, painelDeLuz } from "../outrosRecursos/luz.js";
@@ -33,10 +34,10 @@ function voltarParaTelaPrincipal(){
         estadoAC: estadoAtualDoArcondicionado
     });
 
-    if(estadoAtualDaLuz){
+    if (estadoAtualDaLuz || obterStats().dormindo) {
         dinoFase1(true);
     } else {
-        $(".pixel").addClass("preto")
+        $(".pixel").addClass("preto");
     }
     setTimeout(()=>{
         relogioNaTela(false);

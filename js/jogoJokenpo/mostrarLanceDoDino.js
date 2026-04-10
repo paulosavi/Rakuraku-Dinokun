@@ -20,23 +20,16 @@ function mostrarlanceDoDino(){
 
     let indiceAleatorio = Math.floor(Math.random() * 3);
     lanceDoDino = tiposDeLance[indiceAleatorio];
-    let contador = 0;
 
-    const intervalo = setInterval(()=>{
-        $(".pixel").removeClass("preto");
+    // Mostra as duas mãos ao mesmo tempo (como no original)
+    $(".pixel").removeClass("preto");
+    lanceAtualDoJogador.addClass("preto");
+    lancesDoDinoFrames[indiceAleatorio].addClass("preto");
 
-        if(contador == 0){
-           lancesDoDinoFrames[indiceAleatorio].addClass("preto");
-        }
-        if(contador == 1){
-            lanceAtualDoJogador.addClass("preto");
-        }
-        if(contador == 2){
-            clearInterval(intervalo);
-            compararLances();
-        }
-        contador++;
-    }, 1500)
+    // Após 2 segundos exibindo ambas, compara os lances
+    setTimeout(()=>{
+        compararLances();
+    }, 2000)
 
 }
 

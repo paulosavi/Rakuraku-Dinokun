@@ -5,7 +5,7 @@ import { selecaoEsquerda, percorrerIconesDaEsquerda, iconeDaEsquerda, contadorSe
 import { alterarContadorIntervaloSemInteracao, contadorIntervaloSemInteracao } from "../../principal/intervaloSemInteracao.js";
 import { alterarContadorNecessidades, contadorNecessidades, necessidadesDoDino, percorrerNecessidades, permitirPercorrerNecessidades } from "../../outrosRecursos/painelDeNecessidade.js";
 import { entrarNoJogo, estaDentroDoJogo } from "../../jogoJokenpo/iniciarJokenpo.js";
-import { alterarContadorLanceDoJogador, contadorLanceDoJogador, escolherLanceDoJogador } from "../../jogoJokenpo/escolherLanceDoJogador.js";
+import { alterarContadorLanceDoJogador, contadorLanceDoJogador, escolherLanceDoJogador, vezDoJogador } from "../../jogoJokenpo/escolherLanceDoJogador.js";
 import { percorreOpcoesAhEsquerda } from "./percorrerOpcoesAhEsqueda.js";
 import { obterStats } from "../../principal/stats.js";
 
@@ -31,7 +31,7 @@ function botaoEsquerdo(){
         alterarEstadoAtualDoArcondicionado("ligar");
         arcondicionado(arcondicionadoOn)
     }
-    if(estaDentroDoJogo){
+    if(estaDentroDoJogo && vezDoJogador){
         percorreOpcoesAhEsquerda(escolherLanceDoJogador, contadorLanceDoJogador, alterarContadorLanceDoJogador, 2);
     }
 }

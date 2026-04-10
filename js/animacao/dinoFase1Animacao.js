@@ -1,9 +1,11 @@
 import {
     idleFrames,
     dinoFase1Frame1,
-    dinoDormindoFrame, dinoSujoFrame, dinoDoenteFrame, dinoMortoFrame
+    dinoDormindoFrame, dinoSujoFrame, dinoDoenteFrame, dinoMortoFrame,
+    dormindoFrames, dormindoLuzApagadaFrames, sujoFrames, doenteFrames, mortoFrames
 } from "../frames/dinoFase1frames.js";
 import { obterStats } from "../principal/stats.js";
+import { estadoAtualDaLuz } from "../outrosRecursos/luz.js";
 
 var telaPrincipal = false;
 var frameAtualTelaPrincipal;
@@ -22,45 +24,59 @@ function deslizarTelaPrincipalParaEsquerda(){
 // centro → bounce → esquerda → bounce → direita
 const framesDinoFase1 = idleFrames;
 
-// Estados passivos usam 2 frames iguais (ficam estáticos)
-const framesDoente = [dinoDoenteFrame];
-const framesSujo = [dinoSujoFrame];
-const framesDormindo = [dinoDormindoFrame];
-const framesMorto = [dinoMortoFrame];
-
-// Retorna os frames corretos baseado no estado atual do pet
+// Retorna os frames e intervalo corretos baseado no estado atual do pet
 // Prioridade: morto > doente > sujo > dormindo > normal
+// Todos os estados usam 1000ms entre frames
 function getFramesAtuais() {
     var stats = obterStats();
-    if (!stats.vivo) return framesMorto;
-    if (stats.doente) return framesDoente;
-    if (stats.sujo) return framesSujo;
-    if (stats.dormindo) return framesDormindo;
-    return framesDinoFase1;
+    if (!stats.vivo) return { frames: mortoFrames, intervalo: 1000 };
+    if (stats.doente) return { frames: doenteFrames, intervalo: 1000 };
+    if (stats.sujo) return { frames: sujoFrames, intervalo: 1000 };
+    if (stats.dormindo) {
+        if (!estadoAtualDaLuz) return { frames: dormindoLuzApagadaFrames, intervalo: 1000 };
+        return { frames: dormindoFrames, intervalo: 1000 };
+    }
+    return { frames: framesDinoFase1, intervalo: 1000 };
 }
 
 function dinoFase1(boleano) {
     telaPrincipal = boleano;
     let contador = 0;
+    let estadoAnterior = null;
+    let intervaloAtual = null;
 
-    const intervalo = setInterval(() => {
-        if(!telaPrincipal){
-            clearInterval(intervalo);
-            return;
-        }
+    function iniciarLoop() {
+        var atual = getFramesAtuais();
+        estadoAnterior = atual;
+        contador = 0;
 
-        var frames = getFramesAtuais();
+        intervaloAtual = setInterval(() => {
+            if(!telaPrincipal){
+                clearInterval(intervaloAtual);
+                return;
+            }
 
-        $(".pixel").removeClass("preto");
-        if (frames.length > 0) {
-            frameAtualTelaPrincipal = frames[contador % frames.length].addClass("preto");
-        }
+            // Checa se o estado mudou (ex: ficou doente, acordou, etc.)
+            var novo = getFramesAtuais();
+            if (novo.frames !== estadoAnterior.frames) {
+                clearInterval(intervaloAtual);
+                iniciarLoop();
+                return;
+            }
 
-        contador++;
-        if(contador >= frames.length){
-            contador = 0;
-        }
-    }, 1000);
+            $(".pixel").removeClass("preto");
+            if (novo.frames.length > 0) {
+                frameAtualTelaPrincipal = novo.frames[contador % novo.frames.length].addClass("preto");
+            }
+
+            contador++;
+            if(contador >= novo.frames.length){
+                contador = 0;
+            }
+        }, atual.intervalo);
+    }
+
+    iniciarLoop();
 }
 
 export {

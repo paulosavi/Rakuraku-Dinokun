@@ -21,6 +21,9 @@ var stats = {
     dietaVegetal: 0,  // vezes que comeu cenoura ou maçã
     dietaMassa: 0,    // vezes que comeu macarrão
 
+    // Comida/água pendente para converter em peso (1kg/hora)
+    comidaPendente: 0,
+
     // Contadores de doença/morte
     horasDoente: 0,   // quantas horas está doente sem ser tratado
     causaMorte: "",   // "doenca", "velhice", ""
@@ -73,7 +76,7 @@ function alimentar(indiceComida) {
     if (stats.fome < 4) {
         stats.fome = Math.min(4, stats.fome + 1);
     }
-    stats.peso += 1;
+    stats.comidaPendente += 1;
 
     // Rastrear dieta para evolução
     var categoria = DIETA_COMIDA[indiceComida];
@@ -93,7 +96,7 @@ function darAgua() {
     if (stats.sede < 4) {
         stats.sede = Math.min(4, stats.sede + 1);
     }
-    stats.peso += 1;
+    stats.comidaPendente += 1;
     salvarStats();
 }
 
@@ -148,9 +151,15 @@ function resultadoJokenpo(dinoVenceu) {
     salvarStats();
 }
 
+// Horários de degradação conforme o Dinkie Dino original:
+// 10h, 11h, 12h, 13h, 14h, 15h, 16h → fome e sede
+// 10h, 12h, 14h, 16h (horas pares) → humor também
+const HORAS_DEGRADACAO = [10, 11, 12, 13, 14, 15, 16];
+const HORAS_HUMOR = [10, 12, 14, 16];
+
 // Degradação por hora - chamada pelo gameLoop
-// Recebe o estado da luz e retorna true se o pet morreu nesta iteração
-function degradarStats(estadoLuz) {
+// Recebe o estado da luz, AC e a hora atual do relógio interno
+function degradarStats(estadoLuz, estadoAC, hora) {
     if (!stats.vivo) return false;
 
     // Se dormindo, só rola a checagem de luz (não degrada outros stats)
@@ -160,20 +169,41 @@ function degradarStats(estadoLuz) {
             stats.doente = true;
         }
     } else {
-        // Degradação normal (quando acordado)
-        if (stats.faseEvolucao === 1) {
-            stats.fome = Math.max(0, stats.fome - 2);
-            stats.sede = Math.max(0, stats.sede - 2);
-        } else {
-            stats.fome = Math.max(0, stats.fome - 1);
-            stats.sede = Math.max(0, stats.sede - 1);
+        // Fome e sede só degradam nos horários específicos (10h-16h)
+        if (HORAS_DEGRADACAO.includes(hora)) {
+            if (stats.faseEvolucao === 1) {
+                stats.fome = Math.max(0, stats.fome - 2);
+                stats.sede = Math.max(0, stats.sede - 2);
+            } else {
+                stats.fome = Math.max(0, stats.fome - 1);
+                stats.sede = Math.max(0, stats.sede - 1);
+            }
         }
 
-        stats.humor = Math.max(0, stats.humor - 1);
+        // Humor só degrada nas horas pares (10h, 12h, 14h, 16h)
+        if (HORAS_HUMOR.includes(hora)) {
+            stats.humor = Math.max(0, stats.humor - 1);
+        }
 
-        // Temperatura varia aleatoriamente (-4 a +4)
-        var variacao = Math.floor(Math.random() * 9) - 4;
-        stats.temperatura = stats.temperatura + variacao;
+        // Conversão de comida/água pendente em peso (1kg/hora)
+        if (stats.comidaPendente > 0) {
+            stats.peso += 1;
+            stats.comidaPendente -= 1;
+        }
+
+        // Temperatura: AC ligado empurra para 25, senão sobe aleatoriamente (0-8°C)
+        if (estadoAC === "ligar") {
+            // AC ligado: move 3 graus em direção a 25
+            if (stats.temperatura > 25) {
+                stats.temperatura = Math.max(25, stats.temperatura - 3);
+            } else if (stats.temperatura < 25) {
+                stats.temperatura = Math.min(25, stats.temperatura + 3);
+            }
+        } else {
+            // AC desligado: temperatura sobe aleatoriamente 0-8°C (original)
+            var variacao = Math.floor(Math.random() * 9);
+            stats.temperatura = stats.temperatura + variacao;
+        }
 
         // Temperatura fora do ideal = doença
         if (stats.temperatura > 30 || stats.temperatura < 20) {
@@ -244,6 +274,7 @@ function resetarStats() {
     stats.dietaCarne = 0;
     stats.dietaVegetal = 0;
     stats.dietaMassa = 0;
+    stats.comidaPendente = 0;
     stats.horasDoente = 0;
     stats.causaMorte = "";
     stats.ultimaAtualizacao = agora();

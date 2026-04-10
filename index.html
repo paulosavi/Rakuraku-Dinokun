@@ -69,6 +69,17 @@
       </div>
       <div id="debug-fields"></div>
       <div style="margin-top:10px; border-top:1px solid #334155; padding-top:8px;">
+        <strong style="color:#7dd3fc; font-size:11px;">Ambiente</strong>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin:3px 0;">
+          <label style="color:#94a3b8; font-size:11px;">Luz</label>
+          <input id="dbg-luz" type="checkbox" style="width:auto;">
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin:3px 0;">
+          <label style="color:#94a3b8; font-size:11px;">Ar Condicionado</label>
+          <input id="dbg-ac" type="checkbox" style="width:auto;">
+        </div>
+      </div>
+      <div style="margin-top:10px; border-top:1px solid #334155; padding-top:8px;">
         <strong style="color:#7dd3fc; font-size:11px;">Relógio Interno</strong>
         <div style="display:flex; gap:5px; align-items:center; margin:5px 0;">
           <input id="dbg-hora" type="number" min="0" max="23" style="width:45px; padding:3px 5px; background:#0f172a; color:#eee; border:1px solid #334155; border-radius:3px; font-size:13px; text-align:center;">
@@ -80,12 +91,14 @@
       </div>
       <button id="debug-apply" style="width:100%; margin-top:8px; padding:6px; background:#0284c7; color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:11px;">Aplicar Stats</button>
       <button id="debug-reset" style="width:100%; margin-top:4px; padding:6px; background:#7f1d1d; color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:11px;">Reset (novo jogo)</button>
-      <div id="debug-log" style="margin-top:8px; font-size:10px; color:#94a3b8;"></div>
+      <button id="debug-forcar-tick" style="width:100%; margin-top:4px; padding:6px; background:#059669; color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:11px;">Forçar Tick (1 hora)</button>
+      <button id="debug-test-degradacao" style="width:100%; margin-top:4px; padding:6px; background:#6d28d9; color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:11px;">Testar Degradação 24h</button>
+      <div id="debug-log" style="margin-top:8px; font-size:10px; color:#94a3b8; white-space:pre-wrap; max-height:200px; overflow-y:auto;"></div>
     </div>
 
     <script type="module">
-      import { obterStats, alterarStat, salvarStats, resetarStats, carregarStats } from "./js/principal/stats.js";
-      import { limparEstado } from "./js/principal/saveSystem.js";
+      import { obterStats, alterarStat, salvarStats, resetarStats, carregarStats, degradarStats } from "./js/principal/stats.js";
+      import { carregarEstado, limparEstado, salvarEstado } from "./js/principal/saveSystem.js";
       import { definirHora, getHoras, getMinutos } from "./js/principal/relogioInterno.js";
 
       const editableStats = [
@@ -101,12 +114,20 @@
         { key: "dormindo", label: "Dormindo", type: "checkbox" },
         { key: "vivo", label: "Vivo", type: "checkbox" },
         { key: "horasDoente", label: "Horas doente", min: 0, max: 24, type: "number" },
+        { key: "comidaPendente", label: "Comida pendente", min: 0, max: 20, type: "number" },
       ];
+
+      function refreshAmbiente() {
+        const estado = carregarEstado() || {};
+        document.getElementById("dbg-luz").checked = estado.estadoLuz === true;
+        document.getElementById("dbg-ac").checked = estado.estadoAC === "ligar";
+      }
 
       function buildDebugFields() {
         const container = document.getElementById("debug-fields");
         container.innerHTML = "";
         const stats = obterStats();
+        refreshAmbiente();
 
         editableStats.forEach(s => {
           const row = document.createElement("div");
@@ -145,6 +166,7 @@
           if (s.type === "checkbox") input.checked = !!stats[s.key];
           else input.value = stats[s.key] ?? 0;
         });
+        refreshAmbiente();
       }
 
       document.getElementById("debug-apply").addEventListener("click", () => {
@@ -155,6 +177,10 @@
           alterarStat(s.key, val);
         });
         salvarStats();
+        salvarEstado({
+          estadoLuz: document.getElementById("dbg-luz").checked,
+          estadoAC: document.getElementById("dbg-ac").checked ? "ligar" : "desligar"
+        });
         document.getElementById("debug-log").textContent = "✓ Stats aplicados! (" + new Date().toLocaleTimeString() + ")";
       });
 
@@ -166,6 +192,65 @@
 
       document.getElementById("debug-close").addEventListener("click", () => {
         document.getElementById("debug-panel").style.display = "none";
+      });
+
+      document.getElementById("debug-forcar-tick").addEventListener("click", () => {
+        const estado = carregarEstado() || {};
+        const estadoLuz = estado.estadoLuz === true;
+        const estadoAC = estado.estadoAC || "desligar";
+        const hora = getHoras();
+        const antes = JSON.parse(JSON.stringify(obterStats()));
+        degradarStats(estadoLuz, estadoAC, hora);
+        salvarStats();
+        // Avança o relógio 1 hora
+        const novaHora = (hora + 1) % 24;
+        definirHora(novaHora, getMinutos());
+        refreshFields();
+        const depois = obterStats();
+        let mudancas = [];
+        if (antes.comidaPendente !== depois.comidaPendente) mudancas.push("comida " + antes.comidaPendente + "→" + depois.comidaPendente);
+        if (antes.peso !== depois.peso) mudancas.push("peso " + antes.peso + "→" + depois.peso);
+        if (antes.fome !== depois.fome) mudancas.push("fome " + antes.fome + "→" + depois.fome);
+        if (antes.sede !== depois.sede) mudancas.push("sede " + antes.sede + "→" + depois.sede);
+        if (antes.humor !== depois.humor) mudancas.push("humor " + antes.humor + "→" + depois.humor);
+        if (antes.temperatura !== depois.temperatura) mudancas.push("temp " + antes.temperatura + "→" + depois.temperatura);
+        const log = document.getElementById("debug-log");
+        log.textContent = "Tick às " + hora + "h → " + novaHora + "h: " + (mudancas.length ? mudancas.join(", ") : "sem mudanças");
+      });
+
+      document.getElementById("debug-test-degradacao").addEventListener("click", () => {
+        // Salva stats atuais para restaurar depois
+        const statsBackup = JSON.parse(JSON.stringify(obterStats()));
+        const log = document.getElementById("debug-log");
+        let resultado = "=== Teste Degradação 24h ===\n";
+        resultado += "Hora | Fome | Sede | Humor\n";
+        resultado += "-----+------+------+------\n";
+
+        // Reseta stats para valores máximos
+        alterarStat("fome", 4);
+        alterarStat("sede", 4);
+        alterarStat("humor", 5);
+        alterarStat("dormindo", false);
+        alterarStat("doente", false);
+        alterarStat("temperatura", 25);
+
+        for (let h = 0; h < 24; h++) {
+          const antes = { fome: obterStats().fome, sede: obterStats().sede, humor: obterStats().humor };
+          degradarStats(true, "ligar", h);
+          const depois = obterStats();
+          const fD = antes.fome !== depois.fome ? " -" + (antes.fome - depois.fome) : "   ";
+          const sD = antes.sede !== depois.sede ? " -" + (antes.sede - depois.sede) : "   ";
+          const hD = antes.humor !== depois.humor ? " -" + (antes.humor - depois.humor) : "   ";
+          resultado += String(h).padStart(4, " ") + " |" + fD.padStart(5, " ") + " |" + sD.padStart(5, " ") + " |" + hD.padStart(5, " ") + "\n";
+        }
+
+        resultado += "\nEsperado:\nFome/Sede: 10,11,12,13,14,15,16\nHumor: 10,12,14,16";
+
+        // Restaura stats originais
+        Object.keys(statsBackup).forEach(k => alterarStat(k, statsBackup[k]));
+        salvarStats();
+
+        log.textContent = resultado;
       });
 
       document.getElementById("debug-set-clock").addEventListener("click", () => {

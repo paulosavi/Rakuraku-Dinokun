@@ -111,7 +111,7 @@ function botaoEnter(){
         banharDinoFase1();
         return
     }
-    if(atividade == "ar-condicionado"){
+    if(atividade == "ar-condicionado" && !painelDoArcondicionado){
         alterarEstadoAtualDoArcondicionado("ligar");
         habilitarEventosIniciais(false);
         pararDinoTelaPrincipal(false);
@@ -119,6 +119,14 @@ function botaoEnter(){
         pararIntervaloSemInteracao(false);
         intervaloSemInteracao();
         arcondicionado(arcondicionadoOn);
+        return
+    }
+    if(painelDoArcondicionado){
+        pararIntervaloSemInteracao(true);
+        alterarContadorIntervaloSemInteracao(0);
+        salvarEstado({ estadoAC: estadoAtualDoArcondicionado });
+        voltarParaTelaPrincipal();
+        mostrarPainelDoArcondionado(false);
         return
     }
     if(atividade == "medicar" && telaPrincipal){
