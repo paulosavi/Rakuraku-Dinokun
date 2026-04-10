@@ -1,5 +1,6 @@
 import { banhoDinoFase1Frames } from "../frames/dinoFase1BanhoFrames.js";
 import { dinoFase1Feliz } from "./dinoFase1FelizAnimacao.js";
+import { banhar } from "../principal/stats.js";
 
 function banharDinoFase1(){
 
@@ -13,6 +14,7 @@ function banharDinoFase1(){
         }
         if(contador === 3){
             clearInterval(intervalo);
+            banhar();
             dinoFase1Feliz();
         }
       

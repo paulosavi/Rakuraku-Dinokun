@@ -1,6 +1,7 @@
 import { alterarPontosDoJogador, lanceDoJogador, pontosDoJogador } from "./escolherLanceDoJogador.js";
 import { alterarPontosDoDino, lanceDoDino, pontosDoDino } from "./mostrarLanceDoDino.js";
 import { resultadoDosLances } from "./resultadoDoJogo.js";
+import { resultadoJokenpo } from "../principal/stats.js";
 
 var rodadas = 0;
 var dinoVenceu; 
@@ -16,6 +17,7 @@ function compararLances(){
     rodadas++;
     if((lanceDoJogador === "papel" && lanceDoDino === "tesoura") || (lanceDoJogador === "pedra" && lanceDoDino === "papel") || (lanceDoJogador === "tesoura" && lanceDoDino === "pedra")){
         dinoVenceu = true;
+        resultadoJokenpo(true);
         resultadoDosLances();
         valorParaDino++;
         alterarPontosDoDino(valorParaDino);
@@ -24,15 +26,17 @@ function compararLances(){
     //dino não venceu
     if(lanceDoJogador === lanceDoDino){
         dinoVenceu = false;
+        resultadoJokenpo(false);
         resultadoDosLances();
     }
 
     if((lanceDoJogador === "papel" && lanceDoDino === "pedra") || (lanceDoJogador === "pedra" && lanceDoDino === "tesoura") || (lanceDoJogador === "tesoura" && lanceDoDino === "papel")){
         dinoVenceu = false;
+        resultadoJokenpo(false);
         resultadoDosLances();
         valorParaJogador++;
         alterarPontosDoJogador(valorParaJogador);
-    
+
     }
 }
 

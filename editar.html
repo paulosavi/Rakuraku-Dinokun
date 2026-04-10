@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Editor de Frames - Rakuraku Dinokun</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: sans-serif; margin: 0; padding: 20px; background: #1a1a2e; color: #eee; }
+  h1 { margin: 0 0 15px 0; font-size: 20px; color: #7dd3fc; }
+  .app { display: flex; gap: 20px; align-items: flex-start; }
+  .sidebar { width: 280px; flex-shrink: 0; background: #16213e; padding: 15px; border-radius: 8px; }
+  .main { flex: 1; }
+  .controls { margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 4px; }
+  select, button, input[type=text] {
+    padding: 8px 10px; font-size: 13px; border: 1px solid #334155;
+    background: #0f172a; color: #eee; border-radius: 4px; font-family: inherit;
+  }
+  select { width: 100%; }
+  button { cursor: pointer; }
+  button:hover { background: #1e293b; border-color: #475569; }
+  button.primary { background: #0284c7; border-color: #0369a1; }
+  button.primary:hover { background: #0369a1; }
+  button.danger { background: #7f1d1d; border-color: #991b1b; }
+  button.danger:hover { background: #991b1b; }
+  .grid-wrap { display: inline-block; background: #0b1220; padding: 12px; border-radius: 8px; }
+  .grid {
+    display: grid;
+    grid-template-columns: 22px repeat(19, 28px);
+    grid-template-rows: 22px repeat(16, 28px);
+    gap: 1px;
+  }
+  .label-col, .label-row {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: #64748b; user-select: none;
+  }
+  .pixel {
+    background: #334155; cursor: pointer; user-select: none;
+    border-radius: 2px; transition: background 0.05s;
+  }
+  .pixel:hover { outline: 2px solid #38bdf8; outline-offset: -1px; }
+  .pixel.on { background: #f8fafc; }
+  .info { margin-top: 12px; font-size: 11px; color: #94a3b8; line-height: 1.6; }
+  .info code { background: #0f172a; padding: 2px 5px; border-radius: 3px; font-size: 10px; }
+  .stat { display: flex; justify-content: space-between; font-size: 12px; margin: 6px 0; padding: 6px 8px; background: #0f172a; border-radius: 4px; }
+  .stat span:last-child { color: #38bdf8; font-weight: bold; }
+  .frame-list { max-height: 300px; overflow-y: auto; margin-top: 10px; }
+  .frame-item {
+    padding: 6px 8px; font-size: 11px; cursor: pointer;
+    border-radius: 3px; margin-bottom: 2px; background: #0f172a;
+  }
+  .frame-item:hover { background: #1e293b; }
+  .frame-item.active { background: #0284c7; color: #fff; }
+  .output-box {
+    margin-top: 10px; padding: 8px; background: #0f172a;
+    border-radius: 4px; font-family: monospace; font-size: 10px;
+    word-break: break-all; max-height: 150px; overflow-y: auto;
+    color: #cbd5e1;
+  }
+  .section { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #334155; }
+  .section:last-child { border-bottom: none; }
+  .section-title { font-size: 12px; color: #7dd3fc; text-transform: uppercase; margin-bottom: 8px; }
+  .category { font-size: 10px; color: #64748b; margin: 8px 0 4px 0; text-transform: uppercase; }
+  .dirty { color: #fbbf24 !important; }
+</style>
+</head>
+<body>
+
+<h1>🦖 Editor de Frames - Rakuraku Dinokun</h1>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="section">
+      <div class="section-title">Frame Atual</div>
+      <input type="text" id="frameName" placeholder="Nome do frame" readonly>
+      <div class="stat">
+        <span>Pixels ligados:</span>
+        <span id="pixelCount">0</span>
+      </div>
+      <div class="stat">
+        <span>Status:</span>
+        <span id="dirtyStatus">Salvo</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Ações</div>
+      <button id="saveBtn" class="primary" style="width:100%;margin-bottom:5px;">💾 Salvar Frame</button>
+      <button id="clearBtn" class="danger" style="width:100%;margin-bottom:5px;">🗑️ Limpar Grid</button>
+      <button id="revertBtn" style="width:100%;">↩️ Reverter</button>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Import / Export</div>
+      <button id="exportBtn" class="primary" style="width:100%;margin-bottom:5px;">📥 Exportar JSON</button>
+      <button id="importBtn" style="width:100%;margin-bottom:5px;">📤 Importar JSON</button>
+      <button id="copyBtn" style="width:100%;margin-bottom:5px;">📋 Copiar Frame Atual</button>
+      <button id="resetBtn" class="danger" style="width:100%;">🔄 Reset (Descartar Tudo)</button>
+      <input type="file" id="fileInput" accept=".json" style="display:none">
+    </div>
+
+    <div class="section">
+      <div class="section-title">Lista de Frames</div>
+      <div class="frame-list" id="frameList"></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="grid-wrap">
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <div class="info">
+      <p><strong>Clique esquerdo</strong> para pintar. <strong>Clique direito</strong> para apagar. <strong>Arraste</strong> para pintar múltiplos pixels.</p>
+      <p>Grade: 16 linhas (A-P) × 19 colunas (01-19). Pixels: <code>B03</code>, <code>F15</code>, etc.</p>
+      <p><strong>Fluxo:</strong> Selecione um frame na lista → edite → clique em "Salvar Frame" → "Exportar JSON" quando terminar tudo.</p>
+    </div>
+
+    <div class="section" style="margin-top: 15px;">
+      <div class="section-title">Saída do frame atual</div>
+      <div class="output-box" id="outputBox">Nenhum frame selecionado</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// =============================================================
+// DADOS DOS FRAMES (extraídos dos arquivos JS originais)
+// =============================================================
+
+const FRAMES_INICIAIS = {
+  "necessidades": {
+    "humor_nivel_0_muito_triste": "B06,B07,B08,B09,B10,B11,B12,B13,B14,C05,C06,C14,C15,D04,D16,E04,E06,E09,E11,E14,E16,F03,F07,F08,F12,F13,F17,G03,G17,H03,H06,H07,H08,H09,H10,H11,H12,H13,H14,H17,I03,I05,I06,I07,I08,I09,I10,I11,I12,I13,I14,I15,I17,J03,J05,J06,J07,J08,J09,J10,J11,J12,J13,J14,J15,J17,K03,K05,K06,K07,K08,K09,K10,K11,K12,K13,K14,K15,K17,L03,L17,M04,M16,N05,N15,O06,O07,O13,O14,P07,P08,P09,P10,P11,P12,P13",
+    "humor_nivel_1_triste": "B06,B07,B08,B09,B10,B11,B12,B13,B14,C05,C06,C14,C15,D04,D16,E04,E06,E09,E11,E14,E16,F03,F07,F08,F12,F13,F17,G03,G17,H03,H06,H07,H08,H09,H10,H11,H12,H13,H14,H17,I03,I05,I06,I07,I08,I09,I10,I11,I12,I13,I14,I15,I17,J03,J05,J06,J07,J08,J09,J10,J11,J12,J13,J14,J15,J17,K03,K05,K06,K07,K08,K09,K10,K11,K12,K13,K14,K15,K17,L03,L17,M04,M16,N05,N15,O06,O07,O13,O14,P07,P08,P09,P10,P11,P12,P13",
+    "humor_nivel_2_neutro": "B06,B07,B08,B09,B10,B11,B12,B13,B14,C05,C06,C14,C15,D04,D16,E04,E06,E09,E11,E14,E16,F03,F07,F08,F12,F13,F17,G03,G17,H03,H06,H07,H08,H09,H10,H11,H12,H13,H14,H17,I03,I05,I06,I07,I08,I09,I10,I11,I12,I13,I14,I15,I17,J03,J05,J06,J07,J08,J09,J10,J11,J12,J13,J14,J15,J17,K03,K05,K06,K07,K08,K09,K10,K11,K12,K13,K14,K15,K17,L03,L17,M04,M16,N05,N15,O06,O07,O13,O14,P07,P08,P09,P10,P11,P12,P13",
+    "humor_nivel_3_levemente_feliz": "B06,B07,B08,B09,B10,B11,B12,B13,B14,C05,C06,C14,C15,D04,D16,E04,E06,E09,E11,E14,E16,F03,F07,F08,F12,F13,F17,G03,G17,H03,H06,H07,H08,H09,H10,H11,H12,H13,H14,H17,I03,I05,I06,I07,I08,I09,I10,I11,I12,I13,I14,I15,I17,J03,J05,J06,J07,J08,J09,J10,J11,J12,J13,J14,J15,J17,K03,K05,K06,K07,K08,K09,K10,K11,K12,K13,K14,K15,K17,L03,L17,M04,M16,N05,N15,O06,O07,O13,O14,P07,P08,P09,P10,P11,P12,P13",
+    "humor_nivel_4_feliz": "B06,B07,B08,B09,B10,B11,B12,B13,B14,C05,C06,C14,C15,D04,D16,E04,E06,E09,E11,E14,E16,F03,F07,F08,F12,F13,F17,G03,G17,H03,H06,H07,H08,H09,H10,H11,H12,H13,H14,H17,I03,I05,I06,I07,I08,I09,I10,I11,I12,I13,I14,I15,I17,J03,J05,J06,J07,J08,J09,J10,J11,J12,J13,J14,J15,J17,K03,K05,K06,K07,K08,K09,K10,K11,K12,K13,K14,K15,K17,L03,L17,M04,M16,N05,N15,O06,O07,O13,O14,P07,P08,P09,P10,P11,P12,P13",
+    "humor_nivel_5_muito_feliz": "B06,B07,B08,B09,B10,B11,B12,B13,B14,C05,C06,C14,C15,D04,D16,E04,E06,E09,E11,E14,E16,F03,F07,F08,F12,F13,F17,G03,G17,H03,H06,H07,H08,H09,H10,H11,H12,H13,H14,H17,I03,I05,I06,I07,I08,I09,I10,I11,I12,I13,I14,I15,I17,J03,J05,J06,J07,J08,J09,J10,J11,J12,J13,J14,J15,J17,K03,K05,K06,K07,K08,K09,K10,K11,K12,K13,K14,K15,K17,L03,L17,M04,M16,N05,N15,O06,O07,O13,O14,P07,P08,P09,P10,P11,P12,P13",
+    "temperatura": "A01,A03,A04,A05,B03,B05,B16,C01,C03,C05,D03,D05,D09,D10,D11,D13,D14,D15,D17,D18,D19,E01,E03,E05,E11,E13,E17,F03,F04,F05,F09,F10,F11,F13,F14,F15,F17,G01,G03,G04,G05,G09,G15,G17,H03,H04,H05,H09,H10,H11,H13,H14,H15,H17,H18,H19,I01,I03,I04,I05,J03,J04,J05,K02,K06,L01,L04,L07,M01,M03,M04,M05,M07,N01,N04,N07,O02,O06,P03,P04,P05",
+    "sede": "B03,B09,B11,B17,C03,C09,C11,C17,D03,D09,D11,D17,E03,E09,E11,E17,F03,F09,F11,F17,G03,G04,G08,G09,G11,G12,G16,G17,H04,H05,H06,H07,H08,H12,H13,H14,H15,H16,J03,J09,J11,J17,K03,K09,K11,K17,L03,L09,L11,L17,M03,M09,M11,M17,N03,N09,N11,N17,O03,O04,O08,O09,O11,O12,O16,O17,P04,P05,P06,P07,P08,P12,P13,P14,P15,P16",
+    "fome": "F02,F03,F04,F05,F06,F07,F08,F09,F11,F12,F13,F14,F15,F16,F17,F18,G03,G04,G05,G06,G07,G08,G12,G13,G14,G15,G16,G17,H04,H05,H06,H07,H13,H14,H15,H16,N02,N03,N04,N05,N06,N07,N08,N09,N11,N12,N13,N14,N15,N16,N17,N18,O03,O04,O05,O06,O07,O08,O12,O13,O14,O15,O16,O17,P04,P05,P06,P07,P13,P14,P15,P16",
+    "pesoEIdade": "C11,C13,D11,D13,D15,E11,E13,E14,E17,E18,E19,F11,F13,F15,F17,F19,G11,G13,G15,G17,G18,G19,H19,I03,I04,I05,I06,I07,I08,I09,I17,I18,I19,J02,J10,K01,K11,L01,L04,L08,L11,L19,M01,M11,M19,N01,N04,N05,N06,N07,N08,N11,N19,O02,O10,O19,P03,P04,P05,P06,P07,P08,P09,P19",
+    "estudos": "B02,B03,B04,B05,B06,B07,B08,B09,B10,B11,B12,C04,C05,C06,C07,C08,C09,C13,D03,D10,D13,E02,E11,E13,F02,F05,F08,F11,G02,G11,H02,H05,H06,H07,H08,H11,I03,I10,J04,J05,J06,J07,J08,J09,J12,J13,J14,J15,K12,K15,L12,L18,M12,M17,M18,M19,N12,N18,O12,O15,P12,P13,P14,P15"
+  },
+  "dinoFase1": {
+    "frame1": "G08,G09,G10,G11,H07,H12,I06,I13,J06,J08,J11,J13,K06,K13,L06,L13,M07,M08,M09,M10,M11,M12",
+    "frame2": "H08,H09,H10,H11,I07,I12,J06,J13,K06,K13,L06,L13,M07,M08,M09,M10,M11,M12",
+    "frame3": "G07,G08,G09,G10,H06,H11,I05,I12,J05,J07,J10,J12,K05,K12,L05,L12,M07,M06,M08,M09,M10,M11",
+    "frame4": "G09,G10,G11,G12,H08,H13,I07,I14,J07,J09,J12,J14,K07,K14,L07,L14,M08,M09,M10,M11,M12,M13",
+    "feliz": "C09,D06,D13,F08,F09,F10,F11,G03,G07,G12,G16,H06,H13,I06,I08,I11,I13,J06,J13,K06,K13,L06,L13,M07,M08,M09,M10,M11,M12",
+    "raiva": "B16,B17,C16,C17,D15,F13,G08,G09,G10,G11,H07,H12,I06,I13,J06,J08,J09,J10,J11,J13,K06,K13,L06,L13,M07,M08,M09,M10,M11,M12",
+    "arroto": "M06,M07,M12,L08,L09,L10,L11,K04,K15,M04,N07,N08,N09,N10,N11,N12,M15,M13"
+  },
+  "dinoBanho": {
+    "frame1": "A01,A05,A06,B02,B03,B04,B05,C02,C03,C04,C07,D02,D03,E01,E02,E05,F01,F10,G03,G11,H08,I09,J06,J13,J14,J15,J16,K07,K12,K13,K14,K15,K16,K17,L11,L12,L13,L14,L15,L16,L17,L18,M11,M12,M14,M15,M17,M18,N10,N01,N02,N03,N04,N05,N06,N07,N11,N12,N13,N14,N15,N16,N17,N18,O02,O03,O04,O05,O06,O11,O12,O13,O14,O15,O16,O17,O18,P02,P06,P12,P13,P14,P15,P16,P17",
+    "frame2": "A01,A05,A06,B02,B03,B04,B05,C02,C03,C04,D02,D03,D08,E01,E02,E09,F01,F06,G07,H04,I05,H12,I13,J10,K11,K13,K14,K15,K16,L08,L12,L13,L14,L15,L16,L17,M09,M11,M12,M13,M14,M15,M16,M17,M18,N01,N02,N03,N04,N05,N06,N07,N11,N12,N13,N14,N15,N16,N17,N18,O02,O03,O04,O05,O06,O11,O12,O13,O14,O15,O16,O17,O18,P02,P06,P12,P13,P14,P15,P16,P17",
+    "frame3": "A01,A05,A06,B02,B03,B04,B05,C02,C03,C04,D02,D03,E01,E02,F01,F14,I10,G12,G17,I13,I14,I15,I16,I19,J12,J17,K11,K18,L11,L13,L16,L14,M11,M18,O11,O18,N11,N18,L18,N01,N02,N03,N04,N05,N06,N07,O02,O03,O04,O05,O06,P02,P06,P12,P13,P14,P15,P16,P17"
+  },
+  "dinoBebendo": {
+    "agua1": "C13,C14,C15,C16,D12,D17,E07,E08,E11,E18,F06,F07,F11,F13,F16,F18,G05,G06,G11,G18,H05,H12,H13,H14,H15,H16,H17,I01,I02,I03,I04,I05,I06,I07,I08,I09,J02,J03,J04,J05,J06,J07,J08,K02,K03,K04,K05,K06,K07,K08,L02,L03,L04,L05,L06,L07,L08,M02,M03,M04,M05,M06,M07,M08,N02,N03,N04,N05,N06,N07,N08,O03,O04,O05,O06,O07,P03,P04,P05,P06,P07",
+    "agua2": "B13,B14,B15,B16,C13,C08,C12,C17,C14,C15,C16,D11,D04,D12,D17,D18,E13,E16,F13,F16,G14,J03,J04,J05,J06,J07",
+    "agua3": "B13,B14,B15,B16,C12,C13,C14,C15,C16,C17,D11,D12,D17,D18,K03,E13,E16,F13,F16,G14,K04,K05,K06,K07",
+    "agua4": "B02,B07,B13,B14,B15,B16,C08,D04,C13,C12,C17,C14,C15,C16,D11,D12,D17,D18,E13,E16,F13,F16,G14,L03,L04,L05,L06,L07",
+    "agua5": "B13,B14,B15,B16,C13,C12,C17,C14,C15,C16,D11,D12,D17,D18,E13,E16,F13,F16,G14,M03,M04,M05,M06,M07,P10",
+    "agua6": "B02,B07,B13,B14,B15,B16,C13,C12,C17,C14,C15,C16,D11,D12,D17,D18,E13,E16,F13,F16,G14,A01,A08,N04,N05,N06,P10",
+    "agua7": "B13,B14,B15,B16,C13,C12,C17,C14,C15,C16,D11,D12,D17,D18,E13,E16,F13,F16,G14,O04,O05,O06"
+  },
+  "dinoCarinho": {
+    "frame1": "A14,A15,B10,B11,B12,B13,B16,C09,C16,C17,C18,C19,D10,D11,D12,E09,F10,F11,F12,G09,H06,H07,H08,H09,H10,H11,H12,I05,I09,I17,I18,I19,J10,J11,J12,J13,J14,J15,J16,J04,K04,K06,K09,K11,L04,L11,M04,M11,N05,N06,N07,N08,N09,N10",
+    "frame2": "A14,A15,B10,B11,B12,B13,B16,C09,C16,C17,C18,C19,D06,D09,D10,D11,D12,D16,D17,E04,E09,E12,E13,E14,E15,E18,F10,F12,F18,F19,G06,G07,G08,G12,G13,G14,H05,H06,H07,H08,H09,H12,I04,I05,I09,I11,I12,I13,I14,I17,I18,I19,J06,J09,J10,J12,J13,J14,J15,J16,K06,K09,K12,K13,K14,L19,M12,M13,M14,M15,M16,M17,M18"
+  },
+  "dinoEstudando": {
+    "frame1": "C14,C15,D04,D05,D06,D07,D14,D15,E03,E08,E12,F02,F09,G02,G04,G07,G09,H02,H09,I03,I04,I05,I06,I07,I08,I09,I10,I11,I12,I13,I14,I15,I16,I17,J03,J10,J17,K03,K05,K06,K07,K08,K10,K12,K13,K14,K15,K17,L03,L10,L17,M03,M05,M06,M07,M08,M10,M12,M13,M14,M15,M17,N03,N10,N17,O03,O10,O17,P03,P04,P05,P06,P07,P08,P09,P10,P11,P12,P13,P14,P15,P16,P17",
+    "frame2": "C05,C06,C14,C15,D04,D07,D13,D16,E03,E17,F11,F02,F09,G02,G04,G07,G09,H02,H09,F18,G11,G13,G16,G18,H11,H18"
+  },
+  "dinoMedicar": {
+    "injecao1": "A16,A17,A18,B17,C17,D15,D16,D17,D18,D19,E16,E17,E18,F16,F17,F18,G16,G17,G18,H16,H17,H18,I16,I17,I18,J06,J07,J08,J09,J10,J17,K05,K11,K17,L04,L07,L09,L12,L17,M04,M06,M07,M08,M09,M10,M12,N04,N07,N09,N12,O04,O12,P05,P06,P07,P08,P09,P10,P11",
+    "injecao2": "A16,A17,A18,B17,C16,C18,D15,D16,D18,D19,E15,E19,F17,J06,J07,J08,J09,J10,J14,J16,J18,K05,K06,K07,K08,K09,K10,K11,L04,L05,L07,L09,L11,L12,M06,M07,M08,M09,M10,M17,N06,N10",
+    "injecao3": "C16,C17,C18,D17,E15,E19,F15,F17,F19,G17,H17,I13,I17,J06,J07,J08,J09,J10,J17,J14,K05,K06,K07,K08,K09,K10,K11,K16,K18,L04,L05,L07,L09,L11,L12,M06,M07,M08,M09,M10,N06,N10,N17",
+    "injecao4": "C16,C17,C18,D15,D16,D17,D18,D19,E17,F08,F15,F17,F19,G05,G11,I06,I07,I08,I09,I10,I13,J05,J06,J07,J08,J09,J10,J11,J17,K04,K05,K11,K12,K16,K18,L06,L07,L09,L10,M06,M07,M08,M09,M10,N07,N09,N17"
+  },
+  "comidas": {
+    "hamburguer1": "E05,E06,E07,E08,E09,E10,E11,E12,E13,E14,E15,F04,F09,F16,G03,G07,G12,G17,H03,H17,I02,I03,I04,I05,I06,I07,I08,I09,I10,I11,I12,I13,I14,I15,I16,I17,I18,J02,J03,J04,J05,J06,J07,J08,J09,J10,J11,J12,J13,J14,J15,J16,J17,J18,K02,K03,K04,K05,K06,K07,K08,K09,K10,K11,K12,K13,K14,K15,K16,K17,K18,L03,L17,M03,M17,N04,N05,N06,N07,N08,N09,N10,N11,N12,N13,N14,N15,N16",
+    "hamburguer2": "B13,C17,E15,F15,F16,G14,H14,G17,H17,I14,J14,K14,I15,I16,I17,I18,J15,J16,J17,J18,K15,K16,K17,K18,L14,L17,M15,M17,N15,N16",
+    "hamburguer3": "A15,D19,E09,E10,E11,E12,E13,E14,F15,G09,G12,G14,H08,H14,I09,I10,I11,I12,I13,J09,J10,J11,J12,J13,K09,K10,K11,K12,K13,L09,L14,M10,M15,N10,N11,N12,N13,N14",
+    "hamburguer4": "A15,B13,C17,D19,E05,E06,E07,E08,F04,F09,G03,G07,G09,H03,H08,I02,I03,I04,I05,I06,I07,I08,J02,J03,J04,J05,J06,J07,J08,K02,K03,K04,K05,K06,K07,K08,L03,L09,M03,M10,N04,N05,N06,N07,N08,N09",
+    "macarrao1": "A07,A10,A13,B07,B10,B13,C07,C10,C13,D06,D09,D12,E03,E04,E05,E06,E07,E08,E09,E10,E11,E12,E13,E14,E15,E16,E17,E18,E19,F06,F09,F12,G03,G04,G05,G06,G07,G08,G09,G10,G11,G12,G13,G14,G15,G16,G17,G18,G19,H06,H09,H12,I07,I10,I13,J07,J10,J13,K07,K10,K13,L04,L05,L06,L07,L08,L09,L10,L11,L12,L13,L14,L15,L16,M04,M05,M15,M16,N05,N06,N14,N15,O06,O07,O13,O14,P07,P08,P09,P10,P11,P12,P13",
+    "macarrao2": "A06,A07,A09,A10,A12,A13,B06,B09,B12,C06,C07,C09,C10,C12,C13,B03,B04,B05,B06,B08,B09,B11,B12,B14,B15,B16,B17,B18,B19,E03,E04,E05,E07,E08,E10,E11,E13,E14,E15,E16,E17,E18,E19,G03,G04,G05,G06,G08,G09,G11,G12,G14,G15,G16,G17,G18,G19,D03,D04,D05,D07,D08,D10,D11,D13,D14,D15,D16,D17,D18,D19,H06,H07,H09,H10,H12,H13",
+    "sorvete1": "B07,B08,B09,B10,B11,B12,C06,C13,D05,D08,D14,E04,E07,E15,F04,F09,F15,G03,G06,G16,H03,H16,I04,I05,I06,I07,I08,I09,I10,I11,I12,I13,I14,I15,J04,J15,K04,K05,K14,K15,L05,L14,M06,M13,M07,M12,N07,N12,O07,O12,P07,P08,P09,P10,P11,P12",
+    "sorvete2": "B07,B08,B09,C06,C09,E04,F03,F04,F06,G03,G05,G06,H03,H04",
+    "sorvete3": "B10,B11,B12,C09,C13,D05,D09,D14,D17,E10,E11,E15,F03,F09,F12,F15,G08,G13,G14,G16,H15,H16",
+    "sorvete4": "B02,B18,D08,D09,D17,E07,E10,E11,F06,F12,G05,G08,G13,G14,H04,H15",
+    "cenoura1": "A09,A10,A11,B05,B06,B09,B10,B11,B13,B14,C05,C06,C07,C09,C10,C13,C14,D06,D07,D08,D10,D12,E08,E09,E10,E11,F07,F12,G06,G13,H06,H10,H11,H12,H13,I06,I13,J06,J11,J12,J13,K06,K13,L06,L07,L08,L13,M06,M12,M13,N07,N12,O08,O11,P09,P10",
+    "cenoura2": "K06,K07,L06,L07,L09,M06,M10,M11,M13,N07,N12,O08,O11,P09,P10",
+    "cenoura3": "H10,H13,I10,I13,J08,J09,J11,J12,J13,K13,L08,L09,L13,M10,M11,M12",
+    "cenoura4": "F07,F12,G06,G13,H06,H11,H12,I06,I10,J06,J08,J09,K07",
+    "maca1": "B10,B12,B13,B14,B15,C10,C11,C12,C13,C14,C15,C16,D10,D12,D13,D14,D15,E10,F07,F08,F09,F10,F11,F12,F13,F14,G05,G06,G15,G16,H04,H05,H16,H17,I04,I17,J04,J17,K04,K17,L04,L17,M05,M16,N06,N07,N14,N15,O07,O08,O09,O10,O11,O12,O13,O14",
+    "maca2": "E03,E04,F04,G05,H04,H05,H06,H07,I04,I07,I08,J04,J08,J09,K04,K08,K09,L07,M05,M06,L08",
+    "maca3": "F07,F14,F17,F18,G14,G15,G16,G06,G07,G17,H06,H08,H13,H14,H16,H17,I09,I13,I14,I17,J12,J13,J17,K08,K12,K17,L07,L08,L09,L12,L17,M06,M08,M09,M12,M13,M17,N06,N08,N15,N17,N18",
+    "coxa1": "C04,C05,C06,C07,C08,C09,C10,D03,D11,E02,F06,E12,F01,F12,F16,F17,G01,G09,G13,G15,G18,H01,H04,H13,H14,H15,H18,I01,I07,I13,I17,J01,J03,J13,J14,J15,J18,K01,K08,K13,K15,K18,L02,L12,L16,L17,M03,M11,N04,N05,N06,N07,N08,N09,N10",
+    "coxa2": "C05,C06,C07,D03,D07,E02,E06,F01,F02,G01,G06,H01,H04,H05,I01,I04,J01,K01,K02",
+    "coxa3": "B04,C04,F01,F02,I04,I05,J03,J06,K02,K07,L02,L08,M03,M09,M10,N04,N05,N06,N07,N08,N09,N10",
+    "coxa4": "B04,C08,C09,C10,D07,D11,E06,E12,F01,F06,F09,F10,F12,G06,G08,G09,G11,G13,H05,H08,H11,H12,I05,I07,I09,I13,J06,J08,J11,J12,K07,K11,K13,L08,L09,L10,L12,M09,M10,M11"
+  },
+  "chocarOvo": {
+    "frame1": "",
+    "frame2": "C01,C02,C18,C19,D01,D02,D18,D19,E01,E02,E18,E19,F01,F02,F18,F19,G01,G02,G18,G19,H01,H02,H18,H19,I01,I02,I18,I19,J01,J02,J18,J19,K01,K02,K18,K19,L01,L02,L18,L19,M01,M02,M18,M19,N01,N02,N18,N19,A01,A02,A03,A04,A05,A06,A07,A08,A09,A10,A11,A12,A13,A14,A15,A16,A17,A18,A19,B01,B02,B03,B04,B05,B06,B07,B08,B09,B10,B11,B12,B13,B14,B15,B16,B17,B18,B19,O01,O02,O03,O04,O05,O06,O07,O08,O09,O10,O11,O12,O13,O14,O15,O16,O17,O18,O19,P01,P02,P03,P04,P05,P06,P07,P08,P09,P10,P11,P12,P13,P14,P15,P16,P17,P18,P19",
+    "frame3": "C03,C04,C05,C06,C07,C08,C09,C10,C11,C12,C13,C14,C15,C16,C17,D03,D04,D16,D17,E03,E04,E16,E17,F03,F04,F16,F17,G03,G04,G16,G17,H03,H04,H16,H17,I03,I04,I16,I17,J03,J04,J16,J17,K03,K04,K16,K17,L03,L04,L16,L17,M03,M04,M16,M17,N03,N04,N05,N06,N07,N08,N09,N10,N11,N12,N13,N14,N15,N16,N17",
+    "frame4": "D05,D06,D07,D08,D09,D10,D11,D12,D13,D14,D15,E05,E06,E14,E15,F14,F15,F05,F06,G05,G06,G14,G15,H05,H06,H14,H15,I05,I06,I14,I15,J05,J06,J14,J15,K05,K06,K14,K15,L05,L06,L07,L08,L09,L10,L11,L12,L13,L14,L15,M05,M06,M07,M08,M09,M10,M11,M12,M13,M14,M15",
+    "frame5": "E07,E08,E09,E10,E11,E12,E13,F07,F08,F09,F10,F11,F12,F13,J07,J08,J09,J10,J11,J12,J13,K07,K08,K09,K10,K11,K12,K13,G07,G08,G12,G13,H07,H08,H12,H13,I07,I08,I12,I13",
+    "frame6": "G09,G10,G11,H09,H11,I09,I10,I11",
+    "frame7": "G10,H09,H10,H11,I10"
+  },
+  "comida_opcoes": {
+    "luzOn": "B01,B02,B03,B04,B05,B06,B07,B08,B09,B10,B11,B12,B13,B14,B15,B16,B17,B18,B19,C10,C11,C12,C13,C14,C15,C16,C17,C18,C19,D02,D03,D04,D06,D07,D08,D10,D14,D17,E02,E04,E06,E08,E10,E12,E14,E16,E17,E19,F02,F04,F06,F08,F10,F12,F14,F17,G02,G03,G04,G06,G08,G10,G14,G16,G17,G19,H10,H11,H12,H13,H14,H15,H16,H17,H18,H19,I01,I02,I03,I04,I05,I06,I07,I08,I09,I10,I11,I12,I13,I14,I15,I16,I17,I18,I19,K05,L04,L05,L06,M03,M04,M05,M06,M07,N02,N03,N04,N05,N06,N07,N08,O04,O05,O06,P04,P05,P06",
+    "luzOff": "B01,B02,B03,B04,B05,B06,B07,B08,B09,B10,B11,B12,B13,B14,B15,B16,B17,B18,B19,C01,C02,C03,C04,C05,C06,C07,C08,C09,D01,D05,D09,D11,D12,D13,D15,D16,D18,D19,E01,E03,E05,E07,E09,E11,E13,E15,E18,F01,F03,F05,F07,F09,F11,F13,F15,F16,F18,F19,G01,G05,G07,G09,G11,G12,G13,G15,G18,H01,H02,H03,H04,H05,H06,H07,H08,H09,I01,I02,I03,I04,I05,I06,I07,I08,I09,I10,I11,I12,I13,I14,I15,I16,I17,I18,I19,K14,L13,L14,L15,M12,M13,M14,M15,M16,N11,N12,N13,N14,N15,N16,N17,O13,O14,O15,P13,P14,P15"
+  }
+};
+
+// =============================================================
+// ESTADO DO EDITOR
+// =============================================================
+
+const ROWS = 16;
+const COLS = 19;
+const ROW_LETTERS = "ABCDEFGHIJKLMNOP";
+
+let frames = JSON.parse(JSON.stringify(FRAMES_INICIAIS));
+let currentCategory = null;
+let currentFrameName = null;
+let currentPixels = new Set();
+let originalPixels = new Set();
+let isPainting = false;
+let paintMode = null; // 'add' or 'remove'
+let isDirty = false;
+
+// Carrega do localStorage se disponível
+function carregarDoStorage() {
+  try {
+    const saved = localStorage.getItem("editor_frames");
+    if (saved) {
+      frames = JSON.parse(saved);
+      console.log("Frames carregados do localStorage");
+    }
+  } catch (e) {
+    console.warn("Erro ao carregar do localStorage:", e);
+  }
+}
+
+// Tenta carregar frames.json (fonte de verdade). Prioridade:
+// 1. frames.json (via fetch, requer servidor local)
+// 2. localStorage (edições salvas)
+// 3. FRAMES_INICIAIS embutido (fallback)
+async function carregarFramesJson() {
+  try {
+    const response = await fetch("frames.json");
+    if (response.ok) {
+      frames = await response.json();
+      console.log("✓ frames.json carregado do servidor");
+      salvarNoStorage();
+      return true;
+    }
+  } catch (e) {
+    console.warn("Não conseguiu carregar frames.json (precisa de servidor local):", e.message);
+  }
+  return false;
+}
+
+function salvarNoStorage() {
+  try {
+    localStorage.setItem("editor_frames", JSON.stringify(frames));
+  } catch (e) {
+    console.warn("Erro ao salvar no localStorage:", e);
+  }
+}
+
+// =============================================================
+// RENDERIZAÇÃO DO GRID
+// =============================================================
+
+function criarGrid() {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+
+  // Canto superior esquerdo vazio
+  const corner = document.createElement("div");
+  grid.appendChild(corner);
+
+  // Labels das colunas
+  for (let c = 1; c <= COLS; c++) {
+    const label = document.createElement("div");
+    label.className = "label-col";
+    label.textContent = c < 10 ? "0" + c : c;
+    grid.appendChild(label);
+  }
+
+  // Linhas
+  for (let r = 0; r < ROWS; r++) {
+    const rowLabel = document.createElement("div");
+    rowLabel.className = "label-row";
+    rowLabel.textContent = ROW_LETTERS[r];
+    grid.appendChild(rowLabel);
+
+    for (let c = 1; c <= COLS; c++) {
+      const pixel = document.createElement("div");
+      pixel.className = "pixel";
+      const cStr = c < 10 ? "0" + c : "" + c;
+      pixel.dataset.id = ROW_LETTERS[r] + cStr;
+
+      pixel.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        isPainting = true;
+        const id = pixel.dataset.id;
+        if (e.button === 2 || currentPixels.has(id)) {
+          paintMode = "remove";
+          currentPixels.delete(id);
+        } else {
+          paintMode = "add";
+          currentPixels.add(id);
+        }
+        marcarDirty();
+        atualizarGrid();
+      });
+
+      pixel.addEventListener("mouseenter", () => {
+        if (!isPainting) return;
+        const id = pixel.dataset.id;
+        if (paintMode === "add") currentPixels.add(id);
+        else currentPixels.delete(id);
+        marcarDirty();
+        atualizarGrid();
+      });
+
+      pixel.addEventListener("contextmenu", (e) => e.preventDefault());
+
+      grid.appendChild(pixel);
+    }
+  }
+
+  document.addEventListener("mouseup", () => {
+    isPainting = false;
+    paintMode = null;
+  });
+}
+
+function atualizarGrid() {
+  document.querySelectorAll(".pixel").forEach((pixel) => {
+    if (currentPixels.has(pixel.dataset.id)) {
+      pixel.classList.add("on");
+    } else {
+      pixel.classList.remove("on");
+    }
+  });
+  document.getElementById("pixelCount").textContent = currentPixels.size;
+  atualizarOutput();
+}
+
+function atualizarOutput() {
+  const box = document.getElementById("outputBox");
+  if (currentPixels.size === 0) {
+    box.textContent = "(vazio)";
+    return;
+  }
+  const arr = Array.from(currentPixels).sort();
+  box.textContent = arr.join(",");
+}
+
+function marcarDirty() {
+  isDirty = true;
+  const status = document.getElementById("dirtyStatus");
+  status.textContent = "Não salvo";
+  status.classList.add("dirty");
+}
+
+function marcarSalvo() {
+  isDirty = false;
+  const status = document.getElementById("dirtyStatus");
+  status.textContent = "Salvo";
+  status.classList.remove("dirty");
+}
+
+// =============================================================
+// LISTA DE FRAMES
+// =============================================================
+
+function renderizarListaFrames() {
+  const list = document.getElementById("frameList");
+  list.innerHTML = "";
+
+  Object.keys(frames).forEach((category) => {
+    const catLabel = document.createElement("div");
+    catLabel.className = "category";
+    catLabel.textContent = category;
+    list.appendChild(catLabel);
+
+    Object.keys(frames[category]).forEach((frameName) => {
+      const item = document.createElement("div");
+      item.className = "frame-item";
+      if (currentCategory === category && currentFrameName === frameName) {
+        item.classList.add("active");
+      }
+      item.textContent = frameName;
+      item.addEventListener("click", () => selecionarFrame(category, frameName));
+      list.appendChild(item);
+    });
+  });
+}
+
+function selecionarFrame(category, frameName) {
+  if (isDirty && !confirm("Há alterações não salvas. Descartar?")) return;
+
+  currentCategory = category;
+  currentFrameName = frameName;
+  const str = frames[category][frameName] || "";
+  currentPixels = new Set(str ? str.split(",") : []);
+  originalPixels = new Set(currentPixels);
+
+  document.getElementById("frameName").value = category + " / " + frameName;
+  marcarSalvo();
+  atualizarGrid();
+  renderizarListaFrames();
+}
+
+// =============================================================
+// AÇÕES
+// =============================================================
+
+function salvarFrame() {
+  if (!currentCategory || !currentFrameName) {
+    alert("Selecione um frame primeiro");
+    return;
+  }
+  const arr = Array.from(currentPixels).sort();
+  frames[currentCategory][currentFrameName] = arr.join(",");
+  originalPixels = new Set(currentPixels);
+  marcarSalvo();
+  salvarNoStorage();
+}
+
+function limparGrid() {
+  if (!confirm("Limpar todos os pixels do frame atual?")) return;
+  currentPixels.clear();
+  marcarDirty();
+  atualizarGrid();
+}
+
+function reverterFrame() {
+  if (!confirm("Reverter para o estado anterior?")) return;
+  currentPixels = new Set(originalPixels);
+  marcarSalvo();
+  atualizarGrid();
+}
+
+function exportarJson() {
+  const json = JSON.stringify(frames, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "frames.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importarJson() {
+  document.getElementById("fileInput").click();
+}
+
+function copiarFrameAtual() {
+  if (!currentPixels.size) {
+    alert("Frame vazio");
+    return;
+  }
+  const arr = Array.from(currentPixels).sort();
+  const str = arr.join(",");
+  navigator.clipboard.writeText(str).then(() => {
+    alert("Copiado! " + arr.length + " pixels");
+  });
+}
+
+// =============================================================
+// INICIALIZAÇÃO
+// =============================================================
+
+document.getElementById("saveBtn").addEventListener("click", salvarFrame);
+document.getElementById("clearBtn").addEventListener("click", limparGrid);
+document.getElementById("revertBtn").addEventListener("click", reverterFrame);
+document.getElementById("exportBtn").addEventListener("click", exportarJson);
+document.getElementById("importBtn").addEventListener("click", importarJson);
+document.getElementById("copyBtn").addEventListener("click", copiarFrameAtual);
+document.getElementById("resetBtn").addEventListener("click", () => {
+  if (!confirm("Isso vai descartar TODAS as alterações e voltar ao estado inicial. Continuar?")) return;
+  localStorage.removeItem("editor_frames");
+  frames = JSON.parse(JSON.stringify(FRAMES_INICIAIS));
+  currentCategory = null;
+  currentFrameName = null;
+  currentPixels.clear();
+  originalPixels.clear();
+  document.getElementById("frameName").value = "";
+  renderizarListaFrames();
+  atualizarGrid();
+  marcarSalvo();
+  alert("Resetado! Todos os frames voltaram ao estado inicial.");
+});
+
+document.getElementById("fileInput").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      frames = JSON.parse(ev.target.result);
+      salvarNoStorage();
+      renderizarListaFrames();
+      currentCategory = null;
+      currentFrameName = null;
+      currentPixels.clear();
+      originalPixels.clear();
+      document.getElementById("frameName").value = "";
+      atualizarGrid();
+      alert("JSON importado com sucesso!");
+    } catch (err) {
+      alert("Erro ao importar: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+});
+
+// Desabilita menu de contexto no grid
+document.getElementById("grid").addEventListener("contextmenu", (e) => e.preventDefault());
+
+// Inicializar
+(async function init() {
+  // Tenta carregar do frames.json primeiro (fonte de verdade)
+  const carregouJson = await carregarFramesJson();
+
+  // Se não conseguiu (sem servidor), tenta localStorage
+  if (!carregouJson) {
+    carregarDoStorage();
+  }
+
+  criarGrid();
+  renderizarListaFrames();
+  atualizarGrid();
+})();
+</script>
+
+</body>
+</html>

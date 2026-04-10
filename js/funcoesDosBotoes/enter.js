@@ -16,8 +16,13 @@ import { estaDentroDoJogo, iniciarJokenpo } from "../jogoJokenpo/iniciarJokenpo.
 import { mostrarlanceDoDino } from "../jogoJokenpo/mostrarLanceDoDino.js";
 import { vezDoJogador } from "../jogoJokenpo/escolherLanceDoJogador.js";
 import { estaNatelaPrincipal, tela, voltarParaTelaPrincipal } from "../principal/telaPrincipal.js";
+import { salvarEstado } from "../principal/saveSystem.js";
+import { obterStats } from "../principal/stats.js";
 
 function botaoEnter(){
+    // Bloqueia interações se o pet está morto
+    if (!obterStats().vivo) return;
+
     if(atividade == "" && percorrerIconesDaEsquerda){
         selecaoEsquerda();
         return;
@@ -55,13 +60,15 @@ function botaoEnter(){
         luz(luzOn);
         return
     }
-    if(painelDeLuz){  
+    if(painelDeLuz){
         pararIntervaloSemInteracao(true);
         alterarContadorIntervaloSemInteracao(0);
         if(interruptorOn){
             alterarEstadoAtualDaLuz(true);
+            salvarEstado({ estadoLuz: true });
         } else {
             alterarEstadoAtualDaLuz(false);
+            salvarEstado({ estadoLuz: false });
         }
         voltarParaTelaPrincipal();
         mostrarPainelDeLuz(false);

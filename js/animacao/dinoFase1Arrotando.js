@@ -1,11 +1,12 @@
 
 import { dinoFase1Frame1 } from "../frames/dinoFase1frames.js";
 import { dinoFase1Arroto } from "../frames/dinoFase1ReacoesFrame.js";
-import { opcoesDeComida, permitirPercorrerComidas } from "../outrosRecursos/opcoesDeComida.js";
+import { opcoesDeComida, contadorComida, permitirPercorrerComidas } from "../outrosRecursos/opcoesDeComida.js";
 import { atividade, habilitarEventosIniciais } from "../principal/telaInicial.js";
 import { intervaloSemInteracao, pararIntervalo, pararIntervaloSemInteracao } from "../principal/intervaloSemInteracao.js";
 import { dinoEstaComendo, indicarSeDinoEstaComendo } from "./dinoComendo.js";
 import { estaNatelaPrincipal, tela, voltarParaTelaPrincipal } from "../principal/telaPrincipal.js";
+import { alimentar, darAgua } from "../principal/stats.js";
 
 function dinoArrotando(){
     let contador = 1;
@@ -18,13 +19,13 @@ function dinoArrotando(){
         if(contador > 1 && contador <= 3){   
             dinoFase1Arroto.toggleClass("preto");
         }
-        if(contador === 4){     
+        if(contador === 4){
             dinoFase1Arroto.toggleClass("preto");
             if(atividade === "beber"){
                 clearInterval(intervalo);
-                
+                darAgua();
                 return voltarParaTelaPrincipal();
-            }   
+            }
         }
         if(contador === 5){
             dinoFase1Arroto.toggleClass("preto");
@@ -33,7 +34,7 @@ function dinoArrotando(){
             intervaloSemInteracao();
             permitirPercorrerComidas(true);
             indicarSeDinoEstaComendo(false);
-            
+            alimentar(contadorComida);
             return opcoesDeComida();
         }
 

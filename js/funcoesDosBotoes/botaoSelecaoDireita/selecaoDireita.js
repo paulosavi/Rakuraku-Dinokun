@@ -7,9 +7,11 @@ import { alterarContadorComida, comidaAtual, contadorComida, enterComida, opcoes
 import { entrarNoJogo, estaDentroDoJogo } from "../../jogoJokenpo/iniciarJokenpo.js";
 import { alterarContadorLanceDoJogador, contadorLanceDoJogador, escolherLanceDoJogador } from "../../jogoJokenpo/escolherLanceDoJogador.js";
 import { percorreOpcoesAhDireita } from "./percorrerOpcoesAhDireita.js";
+import { obterStats } from "../../principal/stats.js";
 
 
 function botaoDireito(){
+    if (!obterStats().vivo) return;
     if(percorrerIconesDaDireita){
         selecaoDireita();
     }

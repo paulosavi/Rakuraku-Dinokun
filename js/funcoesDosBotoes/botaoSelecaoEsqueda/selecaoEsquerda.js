@@ -7,9 +7,11 @@ import { alterarContadorNecessidades, contadorNecessidades, necessidadesDoDino, 
 import { entrarNoJogo, estaDentroDoJogo } from "../../jogoJokenpo/iniciarJokenpo.js";
 import { alterarContadorLanceDoJogador, contadorLanceDoJogador, escolherLanceDoJogador } from "../../jogoJokenpo/escolherLanceDoJogador.js";
 import { percorreOpcoesAhEsquerda } from "./percorrerOpcoesAhEsqueda.js";
+import { obterStats } from "../../principal/stats.js";
 
 
 function botaoEsquerdo(){
+    if (!obterStats().vivo) return;
     if(percorrerIconesDaEsquerda){
         selecaoEsquerda();
     }

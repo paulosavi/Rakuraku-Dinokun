@@ -2,6 +2,7 @@ import { injecaoDinoFase1Frames } from "../frames/dinoFase1MedicarFrames.js";
 import { habilitarEventosIniciais } from "../principal/telaInicial.js";
 import { dinoFase1 } from "./dinoFase1Animacao.js";
 import { estaNatelaPrincipal, voltarParaTelaPrincipal } from "../principal/telaPrincipal.js";
+import { medicar } from "../principal/stats.js";
 
 
  function medicarDinoFase1(){
@@ -18,6 +19,7 @@ import { estaNatelaPrincipal, voltarParaTelaPrincipal } from "../principal/telaP
         }
         if(contador === 4){
             clearInterval(intervaloMedicar);
+            medicar();
             voltarParaTelaPrincipal();
         }
         

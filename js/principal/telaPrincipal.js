@@ -6,7 +6,8 @@ import { percorrerNecessidades, permitirPercorrerNecessidades } from "../outrosR
 import { entrarNoJogo, estaDentroDoJogo } from "../jogoJokenpo/iniciarJokenpo.js";
 import { relogio, relogioNaTela } from "../funcoesDosBotoes/clock.js";
 import { alterarContadorIntervaloSemInteracao, contadorIntervaloSemInteracao, pararIntervalo, pararIntervaloSemInteracao } from "./intervaloSemInteracao.js";
-import { mostrarPainelDoArcondionado, painelDoArcondicionado } from "../outrosRecursos/painelDoArCondicionado.js";
+import { estadoAtualDoArcondicionado, mostrarPainelDoArcondionado, painelDoArcondicionado } from "../outrosRecursos/painelDoArCondicionado.js";
+import { salvarEstado } from "./saveSystem.js";
 
 
 let tela = true;
@@ -27,10 +28,15 @@ function voltarParaTelaPrincipal(){
     entrarNoJogo(false);
     habilitarEsc(false);
     estaNatelaPrincipal(true)
+    salvarEstado({
+        estadoLuz: estadoAtualDaLuz,
+        estadoAC: estadoAtualDoArcondicionado
+    });
+
     if(estadoAtualDaLuz){
         dinoFase1(true);
-    } else { 
-        $(".pixel").addClass("preto") 
+    } else {
+        $(".pixel").addClass("preto")
     }
     setTimeout(()=>{
         relogioNaTela(false);

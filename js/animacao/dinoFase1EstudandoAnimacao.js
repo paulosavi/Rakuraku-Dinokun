@@ -2,6 +2,7 @@ import { dinoFase1EstudandoFrame1, dinoFase1EstudandoFrame2 } from "../frames/di
 import { habilitarEventosIniciais } from "../principal/telaInicial.js";
 import { dinoFase1 } from "./dinoFase1Animacao.js";
 import { estaNatelaPrincipal, voltarParaTelaPrincipal } from "../principal/telaPrincipal.js";
+import { estudar } from "../principal/stats.js";
 
 function dinoFase1Estudando(){
     estaNatelaPrincipal(false)
@@ -18,6 +19,7 @@ function dinoFase1Estudando(){
         if(contador === 4){
             dinoFase1EstudandoFrame2.toggleClass("preto");
             clearInterval(intervalo);
+            estudar();
             voltarParaTelaPrincipal();
         }   
 

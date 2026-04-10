@@ -1,6 +1,6 @@
-import { humor, temperatura, sede, fome, pesoEIdade, estudos } from "../frames/necessidades.js";
 import { alterarContadorIntervaloSemInteracao, contadorIntervaloSemInteracao } from "../principal/intervaloSemInteracao.js";
 import { habilitarEsc, usoDoEsc } from "../principal/telaInicial.js";
+import { renderNecessidade } from "../frames/necessidadesDinamicas.js";
 
 
 var contadorNecessidades = 0;
@@ -16,15 +16,12 @@ function permitirPercorrerNecessidades(boleano){
     percorrerNecessidades = boleano;
 }
 
-const listaDeNecessidades = [humor, temperatura, sede, fome, pesoEIdade, estudos];
-
 function necessidadesDoDino(){
         habilitarEsc(true);
         alterarContadorIntervaloSemInteracao(0);
-        
-        $(".pixel").removeClass("preto");
+
         contadorIntervaloNecessidade = 0;
-        listaDeNecessidades[contadorNecessidades].toggleClass("preto")
+        renderNecessidade(contadorNecessidades);
 
 }
 
