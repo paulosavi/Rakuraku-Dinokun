@@ -152,8 +152,8 @@ Ao curar doença com remédio: **fome, sede, humor e educação resetam para zer
 - [x] Game loop com cálculo de tempo offline (até 48h, hora a hora simulada)
 - [x] Conversão de peso por hora (comidaPendente → peso)
 - [x] Estados de temperatura separados (comFrio/comCalor com animações próprias)
-- [x] Sistema de evolução por peso e dieta (5 fases, 3 caminhos)
-- [x] Carregamento dinâmico de frames por fase/caminho de evolução
+- [x] Sistema de evolução por peso e dieta — lógica de stats apenas (5 fases, 3 caminhos)
+- [~] Carregamento dinâmico de frames por fase/caminho — estrutura criada mas não funcional
 - [x] Ciclo de sono (21h-9h) com evolução ao acordar
 - [x] Morte por doença (timer aleatório 1-8h) e velhice (20 dias)
 - [x] Animações de estados passivos (doente, sujo, dormindo, morto, frio, calor — 2 frames cada)
@@ -209,10 +209,14 @@ Arquivo: `tests/stats.node.test.mjs` — rodar com `node tests/stats.node.test.m
 
 ## O que FALTA Implementar
 
-### Prioridade 4 - Forma Final
+### Prioridade 4 - Evolução Visual (PENDENTE)
 
+- [ ] Troca real de sprites ao evoluir (idle, sleeping, sick, dirty, cold, hot)
+- [ ] Animações de ações por fase (comer, beber, estudar, banhar, medicar, carinho)
+- [ ] Animações de reação por fase (feliz, raiva)
+- [ ] Frames de jokenpô por fase
+- [ ] Animação de transição visual ao evoluir
 - [ ] Transformação em anjo ou vampiro (fase final)
-- [ ] Animação de transformação
 - [ ] 1 dia na forma final → morte inevitável
 
 ### Prioridade 5 - Polimento
@@ -220,7 +224,6 @@ Arquivo: `tests/stats.node.test.mjs` — rodar com `node tests/stats.node.test.m
 - [ ] Ajuste de relógio pelo jogador (Esc + Enter)
 - [ ] Toggle de som (Left + Right por 3 segundos)
 - [ ] Sistema de alertas sonoros (beep quando stats críticos)
-- [ ] Animação de evolução (transição visual entre fases)
 
 ---
 
