@@ -7,86 +7,124 @@
 
 ---
 
-## Mecânicas do Brinquedo Oficial
+## Mecânicas do Brinquedo Oficial (implementadas)
 
 ### Stats do Pet
 
 | Stat | Descrição | Mecânica |
 |------|-----------|----------|
-| Fome | Pratos (4 unidades) | Cada prato vazio = precisa comer 2x. Diminui por hora |
-| Sede | Copos (4 unidades) | Cada copo vazio = precisa beber 1x. Diminui por hora |
-| Humor | 6 níveis (muito triste → muito feliz) | Diminui 1 por hora. Aumenta ao ganhar jokenpô |
-| Peso | Em kg | Comida/água converte em +1kg por hora |
-| Idade | Dias desde o nascimento | Correlaciona com peso e evolução |
-| Educação | 5 níveis (E+ → D+ → C+ → B+ → A+) | Aumenta via estudo e carinho |
-| Temperatura | Graus | AC ajusta aleatoriamente 0-8°C/hora. Ideal: 25°C |
+| Fome | Pratos (0-4) | Degrada às 10h-16h. Bebê -2, demais -1 |
+| Sede | Copos (0-4) | Degrada às 10h-16h. Bebê -2, demais -1 |
+| Humor | 6 níveis (0-5) | Degrada apenas horas pares (10h, 12h, 14h, 16h). +1 ao dino vencer jokenpô |
+| Peso | Em kg | Comida/água vai para `comidaPendente`, converte +1kg/hora |
+| Idade | Dias desde nascimento | Calculado por timestamp |
+| Educação | 5 níveis (E+ → A+) | +1 via estudo ou carinho. Reseta a 0 com remédio |
+| Temperatura | Graus | AC ligado: desce 0-8°C/hora. AC desligado: sobe 0-8°C/hora. Ideal: 25°C |
+
+### Sistema de Temperatura e AC
+
+- **AC desligado**: temperatura sobe 0-8°C por hora (aquece naturalmente)
+- **AC ligado**: temperatura desce 0-8°C por hora (resfria)
+- **Temp > 30°C**: estado `comCalor` → animação hot.json → cura: ligar AC
+- **Temp < 20°C**: estado `comFrio` → animação cold.json → cura: desligar AC
+- Estados de frio/calor limpam automaticamente quando temp volta ao range 20-30°C
+- Frio/calor são estados separados de doença (doença só cura com remédio)
 
 ### Sistema de Evolução
 
-3 caminhos baseados na dieta:
+Evolução ocorre às 9h quando o pet acorda e o peso ultrapassa o threshold:
 
-| Dieta Principal | Evolução Adulta |
-|----------------|-----------------|
-| Frango & Hambúrguer | T-Rex |
-| Maçã & Cenoura | Brontossauro |
-| Macarrão / tudo | Triceratops |
+| Fase | Peso Mínimo | Descrição |
+|------|-------------|-----------|
+| 1 | 1kg | Bebê |
+| 2 | 15kg | Filhote (genérico) |
+| 3 | 30kg | Jovem (caminho por dieta) |
+| 5 | 50kg | Adolescente |
+| 7 | 70kg | Adulto |
+| 9 | 90kg | Adulto final |
 
-Estágios: Ovo → Bebê → Criança → Adolescente → Adulto → Forma final (anjo/vampiro)
+3 caminhos baseados na dieta a partir da fase 3:
 
-Evolução ocorre às 9h quando peso ultrapassa limites:
-- Nível 1 → Nível 2: 15kg
+| Dieta Principal | Evolução |
+|----------------|----------|
+| Frango & Hambúrguer (carne) | Tyrannosaurus |
+| Maçã & Cenoura (vegetal) | Triceratops |
+| Macarrão / misto (massa) | Brontosaurus |
 
-### Degradação por Hora (Nível de Evolução 1)
+Frames existem para todas as fases e caminhos (idle, sleeping, sick, dirty, cold, hot).
 
-- -2 pratos de comida
-- -2 copos de bebida
-- -1 humor
-- +1kg peso (se comeu/bebeu)
+### Degradação por Horários (conforme original)
 
-### Degradação por Hora (Nível de Evolução 2)
+| Horário | Fome/Sede | Humor |
+|---------|-----------|-------|
+| 10h | -1 (-2 bebê) | -1 |
+| 11h | -1 (-2 bebê) | — |
+| 12h | -1 (-2 bebê) | -1 |
+| 13h | -1 (-2 bebê) | — |
+| 14h | -1 (-2 bebê) | -1 |
+| 15h | -1 (-2 bebê) | — |
+| 16h | -1 (-2 bebê) | -1 |
 
-- -1 prato de comida
-- -1 copo de bebida
-- -1 humor
-- +1kg peso (se comeu/bebeu)
+Temperatura, sujeira e conversão de peso ocorrem toda hora acordado.
 
-### Doenças
+### Peso por Conversão Horária
 
-| Doença | Causa | Tratamento |
-|--------|-------|-----------|
-| Sujo | Aleatório / tempo | Banho |
-| Raiva (calor) | Temperatura > 30°C | Ligar AC |
-| Congelando | Temperatura < 20°C | Desligar AC |
-| Doente | Aleatório / negligência | Remédio |
-| Mau humor | Humor neutro ou pior | Jokenpô / sorvete |
+- Ao comer/beber, `comidaPendente` incrementa (não peso direto)
+- A cada hora, se `comidaPendente > 0`: peso +1, comidaPendente -1
+- Exemplo: come 3 vezes → leva 3 horas pra ganhar 3kg
 
-Ao curar doença com remédio: **todos os medidores resetam para zero**.
+### Doenças e Estados
+
+| Estado | Causa | Tratamento | Animação |
+|--------|-------|-----------|----------|
+| Sujo | 10% chance/hora | Banho | dirty.json (2 frames) |
+| Com Calor | Temp > 30°C | Ligar AC | hot.json (2 frames) |
+| Com Frio | Temp < 20°C | Desligar AC | cold.json (2 frames) |
+| Doente | Fome/sede 0 (30% chance), luz acesa dormindo | Remédio | sick.json (2 frames) |
+| Mau humor | Humor neutro ou pior | Jokenpô | — |
+
+Ao curar doença com remédio: **fome, sede, humor e educação resetam para zero**.
+
+### Morte
+
+- **Por doença**: timer aleatório de 1-8 horas (sorteado ao ficar doente)
+- **Por velhice**: 20 dias de idade
+- Tela de game over com sprite morto (deadNeglect.json, 2 frames)
 
 ### Ciclo de Sono
 
 - Dorme: 21h (9pm)
-- Acorda: 9h (9am)
-- Luz deve ser apagada ao dormir, senão acorda doente
+- Acorda: 9h (9am) — evolução é checada neste momento
+- Luz acesa enquanto dorme → fica doente
+- Dormindo com luz apagada: animação sleeping_mode_original.json (Z's na tela escura)
 
 ### Jokenpô (Pedra-Papel-Tesoura)
 
 - 5 rodadas por partida
-- Empate conta como vitória do jogador
+- Ambas as mãos aparecem simultaneamente (como no original)
 - Vitória do dino: humor +1
-- Derrota do dino: humor não muda
+- Empate ou derrota do dino: humor não muda
+- Botões bloqueados durante animações de resultado (vezDoJogador flag)
+- Ao final das 5 rodadas: animação feliz/raiva conforme resultado geral
 
-### Morte
+### Prioridade de Animação
 
-- Por doença não tratada (tempo limite aleatório)
-- Por velhice (forma final dura 1 dia)
+`morto > dormindo > doente > calor > frio > sujo > idle`
 
 ### Botões
 
 - **Seleção Esquerda**: Água, Comida, Luz, Carinho, Necessidades
 - **Seleção Direita**: Brincar, Estudar, Banho, AC, Remédio
-- **Enter**: Confirmar
+- **Enter**: Confirmar (no painel AC/Luz: confirma e salva estado)
 - **Esc**: Voltar
 - **Clock**: Ver hora
+
+### Painel do AR Condicionado
+
+- Enter abre o painel (mostra ON por padrão)
+- Esquerda/Direita alterna entre ligar/desligar
+- Enter confirma a escolha, salva estado e cura frio/calor conforme direção
+- Funciona igual ao painel de luz (antes bugava, resetava para "ligar" ao reabrir)
 
 ---
 
@@ -96,124 +134,108 @@ Ao curar doença com remédio: **todos os medidores resetam para zero**.
 
 - [x] Menu de navegação (esquerda/direita entre atividades)
 - [x] Animação do ovo chocando
-- [x] Animação do dino na tela principal (fase 1 apenas)
-- [x] Animação de comer (6 tipos de comida) - fome +1, peso +1, rastreia dieta
-- [x] Animação de beber - sede +1, peso +1
-- [x] Animação de carinho - educação +1
-- [x] Animação de estudar - educação +1
-- [x] Animação de banho - remove estado sujo
-- [x] Animação de medicar - cura doença, reseta stats a 0
-- [x] Toggle de luz (liga/desliga visual)
-- [x] Toggle de AC (liga/desliga visual)
-- [x] Jokenpô funcional (5 rodadas, pontuação) - humor +1 quando dino vence
-- [x] Painel de necessidades (6 telas de pixel art estática)
-- [x] Relógio (hora real do sistema)
-- [x] Persistência no localStorage (jogo iniciado, luz, AC, todos os stats)
+- [x] Animação do dino na tela principal (com carregamento dinâmico por fase)
+- [x] Animação de comer (6 tipos de comida) — fome +1, comidaPendente +1, rastreia dieta
+- [x] Animação de beber — sede +1, comidaPendente +1
+- [x] Animação de carinho — educação +1
+- [x] Animação de estudar — educação +1
+- [x] Animação de banho — remove estado sujo
+- [x] Animação de medicar — cura doença, reseta fome/sede/humor/educação a 0
+- [x] Toggle de luz (liga/desliga visual + efeito no sono)
+- [x] Toggle de AC (liga/desliga + efeito na temperatura + cura frio/calor)
+- [x] Jokenpô funcional (5 rodadas, mãos simultâneas, botões bloqueados durante animação)
+- [x] Painel de necessidades dinâmico (temperatura, peso, idade com dígitos reais)
+- [x] Relógio interno configurável
+- [x] Persistência no localStorage
 - [x] Matriz de pixels 16x19
-- [x] Sistema de stats numéricos (fome, sede, humor, peso, idade, educação, temperatura)
-- [x] Degradação automática dos stats com o tempo (a cada hora real)
-- [x] Game loop com cálculo de tempo offline (até 48h acumuladas)
-- [x] Rastreamento de dieta (carne/vegetal/massa) para evolução futura
-- [x] Ciclo de sono básico (21h-9h, flag dormindo)
-- [x] Sistema de frames organizado em `frames/pixelDino/` (um JSON por animação)
-- [x] Loader assíncrono de frames (`framesLoader.js`) com top-level await e cache
+- [x] Sistema de stats completo com degradação por horários específicos
+- [x] Game loop com cálculo de tempo offline (até 48h, hora a hora simulada)
+- [x] Conversão de peso por hora (comidaPendente → peso)
+- [x] Estados de temperatura separados (comFrio/comCalor com animações próprias)
+- [x] Sistema de evolução por peso e dieta (5 fases, 3 caminhos)
+- [x] Carregamento dinâmico de frames por fase/caminho de evolução
+- [x] Ciclo de sono (21h-9h) com evolução ao acordar
+- [x] Morte por doença (timer aleatório 1-8h) e velhice (20 dias)
+- [x] Animações de estados passivos (doente, sujo, dormindo, morto, frio, calor — 2 frames cada)
+- [x] Dormindo com luz apagada: animação sleeping_mode_original
+- [x] Testes automatizados (129 testes via Node.js)
 
-### Frames de Pixel Art Existentes (fase 1 apenas)
+### Painel de Debug
 
-- Dino parado (4 frames)
-- Dino comendo + arrotando
-- Dino bebendo + arrotando
-- Dino estudando (4 frames)
-- Dino tomando banho (3 frames)
-- Dino recebendo carinho (2 frames)
-- Dino sendo medicado (4 frames)
-- Dino feliz / dino triste
-- Ovo chocando (20 frames)
+Acessível via double-click na imagem do tamagotchi:
+
+- Campos editáveis: fome, sede, humor, peso, idade, educação, temperatura, fase evolução, dietas
+- Checkboxes: doente, com calor, com frio, sujo, dormindo, vivo
+- Seção Ambiente: checkboxes de Luz e AR Condicionado
+- Relógio interno: definir hora/minuto
+- Botão "Forçar Tick": simula 1 hora, avança relógio, mostra mudanças no log
+- Botão "Testar Degradação 24h": simula ciclo completo e valida horários
+- Botão "Aplicar Stats": salva alterações
+- Botão "Reset": limpa tudo e recarrega
+
+### Frames de Pixel Art
+
+- Todas as fases e caminhos de evolução (idle, sleeping, sick, dirty, cold, hot, dead)
+- Fase 1 (bebê): idle.json, sleeping.json, sick.json, dirty.json, cold.json, hot.json
+- Fase 2 (filhote): idle2.json, sleeping2.json, sick2.json, dirty2.json, cold2.json, hot2.json
+- Fases 3/5/7/9 por caminho: idle3tyrannosaurus.json, sleeping3triceratops.json, etc.
+- Dormindo luz apagada: sleeping_mode_original.json
+- Morto: deadNeglect.json, deadOldAge.json
 - Jokenpô: pedra, papel, tesoura (jogador e dino)
-- Necessidades: humor, temperatura, sede, fome, peso/idade, estudos (estáticos)
-- Relógio: números 0-9
+- Necessidades: humor (6 níveis), fome (5), sede (5), educação (5), temperatura, peso/idade
+- Comidas: hambúrguer, macarrão, sorvete, cenoura, maçã, coxa
 - Luz on/off, AC on/off
-- Opções de comida: hambúrguer, macarrão, sorvete, cenoura, maçã, coxa
+
+### Testes Automatizados
+
+Arquivo: `tests/stats.node.test.mjs` — rodar com `node tests/stats.node.test.mjs`
+
+| Teste | Cobertura |
+|-------|-----------|
+| Degradação por horários | 24 horas, verifica fome/sede/humor em cada |
+| Bebê degrada mais | -2 vs -1 por fase |
+| Peso conversão horária | comidaPendente → peso com delay |
+| Temperatura AC | 100 iterações: AC esfria, sem AC esquenta |
+| Estados frio/calor | Ativam >30/<20, limpam ao voltar ao range |
+| AC cura estados | Ligar cura calor, desligar cura frio |
+| Jokenpô e humor | Dino vence +1, jogador vence sem mudança, cap em 5 |
+| Remédio reseta stats | Fome/sede/humor/educação → 0 |
+| Dormindo não degrada | Stats ficam iguais |
+| Luz acesa dormindo | Fica doente |
+| Morte por doença | Timer aleatório 1-8h, morte no timing certo |
+| Evolução por peso | Thresholds, caminhos por dieta, pulo de fases |
 
 ---
 
 ## O que FALTA Implementar
 
-### Prioridade 1 - Sistema Base ✅ CONCLUÍDO
+### Prioridade 4 - Forma Final
 
-- [x] Sistema de stats numéricos (fome, sede, humor, peso, idade, educação, temperatura)
-- [x] Degradação automática dos stats com o tempo (a cada hora)
-- [x] Efeito real das ações nos stats (comer reduz fome, beber reduz sede, etc.)
-- [x] Persistência completa dos stats no localStorage
-- [x] Game loop com cálculo de tempo offline
-- [x] Rastreamento de dieta para evolução
-
-### Prioridade 2 - Consequências Visuais ✅ CONCLUÍDO
-
-- [x] Telas de necessidades dinâmicas (humor com 6 faces, fome/sede com indicadores, temperatura/peso/idade com números, educação com letra)
-- [x] Sistema de temperatura (variação aleatória, causa doença se >30 ou <20)
-- [x] Consequências do jokenpô no humor
-- [x] Educação funcional (E+ → A+ via estudo/carinho)
-- [x] Dieta rastrear qual comida foi dada (para evolução)
-
-### Prioridade 2.5 - Infraestrutura de Frames ✅ CONCLUÍDO
-
-- [x] Pasta `frames/pixelDino/` com um JSON por animação (241 arquivos)
-- [x] **Formato de matriz 16×19 (0/1)** - cada arquivo tem `{ frames: [{ id, interval, matrix }] }`
-- [x] `framesLoader.js` async com cache de animações, `fetch()` + top-level await
-- [x] API simplificada: `getFrame(anim, idx)`, `getAllFrames(anim)`, `getFrameMatrix(anim, idx)`
-- [x] Todos os arquivos de frame refatorados para usar a nova API:
-  - `dinoFase1frames.js` → idle (4 frames), sleeping, dirty, sick, deadNeglect
-  - `dinoFase1ReacoesFrame.js` → swallowing, celebrating, losing
-  - `dinoFase1BanhoFrames.js` → bath
-  - `dinoFase1BebendoFrames.js` → drinking
-  - `dinoFase1CarinhoFrames.js` → caressing
-  - `dinoFase1EstudandoFrames.js` → reading
-  - `dinoFase1MedicarFrames.js` → applyingInjection
-  - `comidasFrames.js` → selecting* + eating*
-  - `framesChocarOvo.js` → bornUsaVersion
-  - `luz.js` / `painelDoArCondicionado.js` → switchOn/switchOff
-  - `necessidadesDinamicas.js` → feed0-4, happiness0-5, hydration0-4, school0-4, temperature, weightAge
-- [x] Painel de necessidades super simplificado (telas pré-desenhadas)
-
-### Prioridade 3 - Ciclos de Vida ✅ CONCLUÍDO
-
-- [x] Ciclo de sono básico (21h-9h, flag dormindo)
-- [x] Luz afeta saúde ao dormir (luz acesa enquanto dorme = doença)
-- [x] Sistema de doenças visual (sprites de dormindo, sujo, doente, morto)
-- [x] Sistema de alertas/piscada quando precisa de atenção (fome/sede=0 ou doente)
-- [x] Morte por doença não tratada (12h doente sem remédio)
-- [x] Morte por velhice (20 dias de idade)
-- [x] Tela de game over com sprite de morto
-- [x] Reset automático após morte (5s → aparece chavinha pra recomeçar)
-- [x] Interações bloqueadas quando pet está morto
-
-### Prioridade 4 - Evolução
-
-- [ ] Sistema de evolução baseado em peso/idade/dieta
-- [ ] Sprites para fases 2, 3 e adulta (3 ramos)
-- [ ] Forma final (anjo/vampiro)
-- [ ] Animações para cada fase
+- [ ] Transformação em anjo ou vampiro (fase final)
+- [ ] Animação de transformação
+- [ ] 1 dia na forma final → morte inevitável
 
 ### Prioridade 5 - Polimento
 
 - [ ] Ajuste de relógio pelo jogador (Esc + Enter)
 - [ ] Toggle de som (Left + Right por 3 segundos)
-- [ ] Reset do jogo
+- [ ] Sistema de alertas sonoros (beep quando stats críticos)
+- [ ] Animação de evolução (transição visual entre fases)
 
 ---
 
-## Arquitetura de Frames (infra atual)
+## Arquitetura de Frames
 
 ### Estrutura de pastas
 
 ```
 frames/
   pixelDino/
-    idle.json
-    sleeping.json
-    bath.json
-    drinking.json
+    idle.json              # Fase 1 (bebê)
+    idle2.json             # Fase 2 (filhote)
+    idle3tyrannosaurus.json # Fase 3 caminho carne
+    idle3triceratops.json   # Fase 3 caminho vegetal
+    idle3brontosaurus.json  # Fase 3 caminho massa
     ...
 ```
 
@@ -230,16 +252,20 @@ Cada arquivo JSON segue o formato:
 
 A `matrix` é 16 linhas × 19 colunas de 0s (pixel apagado) e 1s (pixel aceso).
 
-### Fluxo de dados
+### Carregamento dinâmico por fase
 
 ```
-frames/pixelDino/*.json
-     ↓ fetch() com cache
-framesLoader.js (async + top-level await)
-     ↓ getFrame/getAllFrames/getFrameMatrix
-arquivos de frame do jogo (dinoFase1frames.js, etc.)
+obterStats().faseEvolucao + caminhoEvolucao
+     ↓ getSufixoFase()
+     ↓ ex: "3tyrannosaurus"
      ↓
-animações renderizadas na matriz do jogo
+carregarFramesPorFase("idle")
+     ↓ tenta "idle3tyrannosaurus"
+     ↓ fallback: "idle" (frame base)
+     ↓
+framesLoader.js (fetch + cache)
+     ↓
+animação renderizada na matriz
 ```
 
 ### Requisito importante
