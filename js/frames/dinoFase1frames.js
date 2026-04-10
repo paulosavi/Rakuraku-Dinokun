@@ -15,6 +15,8 @@ var dormindoFrames = await getAllFrames("sleeping");
 var dormindoLuzApagadaFrames = await getAllFrames("sleeping_mode_original");
 var sujoFrames = await getAllFrames("dirty");
 var doenteFrames = await getAllFrames("sick");
+var frioFrames = await getAllFrames("cold");
+var calorFrames = await getAllFrames("hot");
 var mortoFrames = await getAllFrames("deadNeglect");
 
 // Mantém exports individuais para compatibilidade
@@ -27,5 +29,5 @@ export {
     dinoFase1Frame1, dinoFase1Frame2, dinoFase1Frame3, dinoFase1Frame4, dinoFase1Frame5,
     idleFrames,
     dinoDormindoFrame, dinoSujoFrame, dinoDoenteFrame, dinoMortoFrame,
-    dormindoFrames, dormindoLuzApagadaFrames, sujoFrames, doenteFrames, mortoFrames
+    dormindoFrames, dormindoLuzApagadaFrames, sujoFrames, doenteFrames, frioFrames, calorFrames, mortoFrames
 };

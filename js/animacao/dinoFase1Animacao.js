@@ -2,7 +2,7 @@ import {
     idleFrames,
     dinoFase1Frame1,
     dinoDormindoFrame, dinoSujoFrame, dinoDoenteFrame, dinoMortoFrame,
-    dormindoFrames, dormindoLuzApagadaFrames, sujoFrames, doenteFrames, mortoFrames
+    dormindoFrames, dormindoLuzApagadaFrames, sujoFrames, doenteFrames, frioFrames, calorFrames, mortoFrames
 } from "../frames/dinoFase1frames.js";
 import { obterStats } from "../principal/stats.js";
 import { estadoAtualDaLuz } from "../outrosRecursos/luz.js";
@@ -30,12 +30,14 @@ const framesDinoFase1 = idleFrames;
 function getFramesAtuais() {
     var stats = obterStats();
     if (!stats.vivo) return { frames: mortoFrames, intervalo: 1000 };
-    if (stats.doente) return { frames: doenteFrames, intervalo: 1000 };
-    if (stats.sujo) return { frames: sujoFrames, intervalo: 1000 };
     if (stats.dormindo) {
         if (!estadoAtualDaLuz) return { frames: dormindoLuzApagadaFrames, intervalo: 1000 };
         return { frames: dormindoFrames, intervalo: 1000 };
     }
+    if (stats.doente) return { frames: doenteFrames, intervalo: 1000 };
+    if (stats.comCalor) return { frames: calorFrames, intervalo: 1000 };
+    if (stats.comFrio) return { frames: frioFrames, intervalo: 1000 };
+    if (stats.sujo) return { frames: sujoFrames, intervalo: 1000 };
     return { frames: framesDinoFase1, intervalo: 1000 };
 }
 

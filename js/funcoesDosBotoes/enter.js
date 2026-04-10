@@ -17,7 +17,7 @@ import { mostrarlanceDoDino } from "../jogoJokenpo/mostrarLanceDoDino.js";
 import { vezDoJogador } from "../jogoJokenpo/escolherLanceDoJogador.js";
 import { estaNatelaPrincipal, tela, voltarParaTelaPrincipal } from "../principal/telaPrincipal.js";
 import { salvarEstado } from "../principal/saveSystem.js";
-import { obterStats } from "../principal/stats.js";
+import { obterStats, alterarStat, salvarStats } from "../principal/stats.js";
 
 function botaoEnter(){
     // Bloqueia interações se o pet está morto
@@ -125,6 +125,13 @@ function botaoEnter(){
         pararIntervaloSemInteracao(true);
         alterarContadorIntervaloSemInteracao(0);
         salvarEstado({ estadoAC: estadoAtualDoArcondicionado });
+        // AC cura estados de temperatura: ligar cura calor, desligar cura frio
+        if (estadoAtualDoArcondicionado === "ligar") {
+            alterarStat("comCalor", false);
+        } else {
+            alterarStat("comFrio", false);
+        }
+        salvarStats();
         voltarParaTelaPrincipal();
         mostrarPainelDoArcondionado(false);
         return

@@ -11,7 +11,9 @@ var stats = {
     educacao: 0,      // 0-4 (E+, D+, C+, B+, A+)
     temperatura: 25,  // graus, ideal = 25
     faseEvolucao: 1,  // 1 = bebê, 2 = criança, 3 = adolescente, 4 = adulto
-    doente: false,    // se está doente
+    doente: false,    // se está doente (cura: remédio)
+    comFrio: false,   // temp < 20°C (cura: desligar AC)
+    comCalor: false,  // temp > 30°C (cura: ligar AC)
     sujo: false,      // se está sujo
     dormindo: false,  // se está dormindo
     vivo: true,       // se está vivo
@@ -191,23 +193,27 @@ function degradarStats(estadoLuz, estadoAC, hora) {
             stats.comidaPendente -= 1;
         }
 
-        // Temperatura: AC ligado empurra para 25, senão sobe aleatoriamente (0-8°C)
+        // Temperatura conforme original:
+        // AC desligado: sobe 0-8°C (aquece naturalmente)
+        // AC ligado: desce 0-8°C (resfria)
         if (estadoAC === "ligar") {
-            // AC ligado: move 3 graus em direção a 25
-            if (stats.temperatura > 25) {
-                stats.temperatura = Math.max(25, stats.temperatura - 3);
-            } else if (stats.temperatura < 25) {
-                stats.temperatura = Math.min(25, stats.temperatura + 3);
-            }
+            var variacao = Math.floor(Math.random() * 9);
+            stats.temperatura = stats.temperatura - variacao;
         } else {
-            // AC desligado: temperatura sobe aleatoriamente 0-8°C (original)
             var variacao = Math.floor(Math.random() * 9);
             stats.temperatura = stats.temperatura + variacao;
         }
 
-        // Temperatura fora do ideal = doença
-        if (stats.temperatura > 30 || stats.temperatura < 20) {
-            stats.doente = true;
+        // Temperatura fora do ideal = estados de frio/calor (não doença)
+        if (stats.temperatura > 30) {
+            stats.comCalor = true;
+        } else {
+            stats.comCalor = false;
+        }
+        if (stats.temperatura < 20) {
+            stats.comFrio = true;
+        } else {
+            stats.comFrio = false;
         }
 
         // Chance aleatória de ficar sujo (10%)
@@ -268,6 +274,8 @@ function resetarStats() {
     stats.temperatura = 25;
     stats.faseEvolucao = 1;
     stats.doente = false;
+    stats.comFrio = false;
+    stats.comCalor = false;
     stats.sujo = false;
     stats.dormindo = false;
     stats.vivo = true;
