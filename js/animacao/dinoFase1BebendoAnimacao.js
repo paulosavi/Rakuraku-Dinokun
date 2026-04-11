@@ -1,18 +1,17 @@
 import { dinoArrotando } from "./dinoFase1Arrotando.js";
-import { aguaFrame1, aguaFrame2, aguaFrame3, aguaFrame4, aguaFrame5, aguaFrame6, aguaFrame7} from "../frames/dinoFase1BebendoFrames.js";
+import { carregarFramesPorFase } from "../frames/dinoFase1frames.js";
 
-const framesDinoBebendo = [aguaFrame1, aguaFrame2, aguaFrame3, aguaFrame4, aguaFrame5, aguaFrame6, aguaFrame7];
-
-function dinoFase1Bebendo(){
+async function dinoFase1Bebendo(){
+    var frames = await carregarFramesPorFase("drinking");
     let contador = 0;
 
     var intervalo = setInterval(() =>{
         $(".pixel").removeClass("preto");
-        framesDinoBebendo[contador].addClass("preto");
+        frames[contador].addClass("preto");
 
         contador++;
 
-        if(contador >= framesDinoBebendo.length){
+        if(contador >= frames.length){
             clearInterval(intervalo);
             dinoArrotando();
             return;

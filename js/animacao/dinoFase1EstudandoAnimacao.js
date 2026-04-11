@@ -1,21 +1,23 @@
-import { dinoFase1EstudandoFrame1, dinoFase1EstudandoFrame2 } from "../frames/dinoFase1EstudandoFrames.js";
-import { habilitarEventosIniciais } from "../principal/telaInicial.js";
-import { dinoFase1 } from "./dinoFase1Animacao.js";
+import { carregarFramesPorFase } from "../frames/dinoFase1frames.js";
 import { estaNatelaPrincipal, voltarParaTelaPrincipal } from "../principal/telaPrincipal.js";
 import { estudar } from "../principal/stats.js";
 
-function dinoFase1Estudando(){
+async function dinoFase1Estudando(){
     estaNatelaPrincipal(false);
-    const frames = [dinoFase1EstudandoFrame1, dinoFase1EstudandoFrame2, dinoFase1EstudandoFrame2, dinoFase1EstudandoFrame1];
+    var frames = await carregarFramesPorFase("reading");
+    // Alterna: frame1, frame2, frame2, frame1
+    var sequencia = frames.length >= 2
+        ? [frames[0], frames[1], frames[1], frames[0]]
+        : frames;
     let contador = 0;
 
     var intervalo = setInterval(() =>{
         $(".pixel").removeClass("preto");
-        frames[contador].addClass("preto");
+        sequencia[contador].addClass("preto");
 
         contador++;
 
-        if(contador >= frames.length){
+        if(contador >= sequencia.length){
             clearInterval(intervalo);
             estudar();
             voltarParaTelaPrincipal();

@@ -58,7 +58,7 @@ function atualizarIdade() {
 }
 
 // Checa ciclo de sono baseado na hora real
-function checarSono() {
+async function checarSono() {
     var horaAtual = getHoras();
     var stats = obterStats();
 
@@ -74,7 +74,8 @@ function checarSono() {
             alterarStat("dormindo", false);
             var evoluiu = checarEvolucao();
             if (evoluiu) {
-                recarregarFramesParaFaseAtual();
+                await recarregarFramesParaFaseAtual();
+                console.log("Evoluiu para fase " + obterStats().faseEvolucao + " (" + obterStats().caminhoEvolucao + ")");
             }
             salvarStats();
         }
@@ -82,7 +83,7 @@ function checarSono() {
 }
 
 // Tick principal - executado a cada hora
-function tick() {
+async function tick() {
     var stats = obterStats();
     if (!stats.vivo) {
         pararGameLoop();
@@ -90,7 +91,7 @@ function tick() {
         return;
     }
 
-    checarSono();
+    await checarSono();
     var morreu = degradarStats(luzEstaAcesa(), estadoDoAC(), getHoras());
     atualizarIdade();
     alterarStat("ultimaAtualizacao", agora());
@@ -103,13 +104,19 @@ function tick() {
 }
 
 // Inicia o game loop
-function iniciarGameLoop(onMorteCallback) {
+async function iniciarGameLoop(onMorteCallback) {
     if (intervaloGameLoop) return;
 
     if (onMorteCallback) callbackMorte = onMorteCallback;
 
+    // Carrega frames da fase atual (caso o jogo recarregue com pet já evoluído)
+    var stats = obterStats();
+    if (stats.faseEvolucao > 1) {
+        await recarregarFramesParaFaseAtual();
+    }
+
     aplicarTempoOffline();
-    checarSono();
+    await checarSono();
 
     // Se já morreu no tempo offline, dispara callback e não inicia
     var stats = obterStats();

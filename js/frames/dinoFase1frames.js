@@ -73,5 +73,5 @@ export {
     idleFrames,
     dinoDormindoFrame, dinoSujoFrame, dinoDoenteFrame, dinoMortoFrame,
     dormindoFrames, dormindoLuzApagadaFrames, sujoFrames, doenteFrames, frioFrames, calorFrames, mortoFrames,
-    recarregarFramesParaFaseAtual, getSufixoFase
+    recarregarFramesParaFaseAtual, getSufixoFase, carregarFramesPorFase
 };

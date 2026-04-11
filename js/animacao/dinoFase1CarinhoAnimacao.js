@@ -1,11 +1,11 @@
-import { carinhoFrame1, carinhoFrame2 } from "../frames/dinoFase1CarinhoFrames.js";
+import { carregarFramesPorFase } from "../frames/dinoFase1frames.js";
 import { voltarParaTelaPrincipal } from "../principal/telaPrincipal.js";
 import { estaNatelaPrincipal } from "../principal/telaPrincipal.js";
 import { fazerCarinho as fazerCarinhoStats } from "../principal/stats.js";
 
-function fazerCarinhoNoDino(){
+async function fazerCarinhoNoDino(){
     estaNatelaPrincipal(false);
-    const frames = [carinhoFrame1, carinhoFrame2];
+    var frames = await carregarFramesPorFase("caressing");
     let contador = 0;
 
     var intervalo = setInterval(() =>{

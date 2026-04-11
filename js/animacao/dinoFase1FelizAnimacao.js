@@ -1,11 +1,13 @@
-import { dinoFase1Frame1 } from "../frames/dinoFase1frames.js";
-import { dinoFase1FelizFrame } from "../frames/dinoFase1ReacoesFrame.js";
+import { carregarFramesPorFase, idleFrames } from "../frames/dinoFase1frames.js";
 import { iniciarJokenpo } from "../jogoJokenpo/iniciarJokenpo.js";
 import { atividade } from "../principal/telaInicial.js"
 import { voltarParaTelaPrincipal } from "../principal/telaPrincipal.js"
 
-function dinoFase1Feliz(){
-   const frames = [dinoFase1Frame1, dinoFase1FelizFrame, dinoFase1Frame1, dinoFase1FelizFrame];
+async function dinoFase1Feliz(){
+   var celebratingFrames = await carregarFramesPorFase("celebrating");
+   var frameNormal = idleFrames[0] || $();
+   var frameFeliz = celebratingFrames[1] || celebratingFrames[0] || $();
+   const frames = [frameNormal, frameFeliz, frameNormal, frameFeliz];
    let contador = 0;
 
    const intervalo = setInterval(()=>{

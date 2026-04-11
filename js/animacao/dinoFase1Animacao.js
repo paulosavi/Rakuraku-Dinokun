@@ -20,13 +20,9 @@ function deslizarTelaPrincipalParaEsquerda(){
     frameAtualTelaPrincipal = frameAtualTelaPrincipal.prev().addClass("preto");
 }
 
-// Animação idle: usa todos os 5 frames do Remagotchi
-// centro → bounce → esquerda → bounce → direita
-const framesDinoFase1 = idleFrames;
-
 // Retorna os frames e intervalo corretos baseado no estado atual do pet
-// Prioridade: morto > doente > sujo > dormindo > normal
-// Todos os estados usam 1000ms entre frames
+// Prioridade: morto > dormindo > doente > calor > frio > sujo > idle
+// Usa imports diretos (live bindings) — atualizam ao recarregar frames por fase
 function getFramesAtuais() {
     var stats = obterStats();
     if (!stats.vivo) return { frames: mortoFrames, intervalo: 1000 };
@@ -38,7 +34,7 @@ function getFramesAtuais() {
     if (stats.comCalor) return { frames: calorFrames, intervalo: 1000 };
     if (stats.comFrio) return { frames: frioFrames, intervalo: 1000 };
     if (stats.sujo) return { frames: sujoFrames, intervalo: 1000 };
-    return { frames: framesDinoFase1, intervalo: 1000 };
+    return { frames: idleFrames, intervalo: 1000 };
 }
 
 function dinoFase1(boleano) {

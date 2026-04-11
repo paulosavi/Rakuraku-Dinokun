@@ -1,9 +1,11 @@
-import { dinoFase1Frame1 } from "../frames/dinoFase1frames.js";
-import { dinoFase1RaivaFrame } from "../frames/dinoFase1ReacoesFrame.js";
+import { carregarFramesPorFase, idleFrames } from "../frames/dinoFase1frames.js";
 import { iniciarJokenpo } from "../jogoJokenpo/iniciarJokenpo.js";
 
-function dinoFase1Raiva(){
-   const frames = [dinoFase1Frame1, dinoFase1RaivaFrame, dinoFase1Frame1, dinoFase1RaivaFrame];
+async function dinoFase1Raiva(){
+   var losingFrames = await carregarFramesPorFase("losing");
+   var frameNormal = idleFrames[0] || $();
+   var frameRaiva = losingFrames[1] || losingFrames[0] || $();
+   const frames = [frameNormal, frameRaiva, frameNormal, frameRaiva];
    let contador = 0;
 
    const intervalo = setInterval(()=>{

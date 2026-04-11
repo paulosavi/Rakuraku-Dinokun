@@ -22,6 +22,7 @@ globalThis.jQuery = jqFn;
 
 // === IMPORTS ===
 const { obterStats, alterarStat, degradarStats, salvarStats, resetarStats, alimentar, darAgua, medicar, resultadoJokenpo, checarEvolucao } = await import("../js/principal/stats.js");
+const { getSufixoFase } = await import("../js/frames/dinoFase1frames.js");
 
 // === TEST RUNNER ===
 let passed = 0;
@@ -285,6 +286,9 @@ assert(obterStats().limiteDoenca > 0, "Doente: limiteDoenca > 0");
 medicar();
 assert(obterStats().horasDoente === 0, "Apos medicar: horasDoente = 0");
 // limiteDoenca reseta no proximo tick quando nao esta mais doente
+// Precisa ter fome/sede > 0 pra nao ficar doente de novo (medicar reseta pra 0)
+alterarStat("fome", 4);
+alterarStat("sede", 4);
 degradarStats(true, "ligar", 11);
 assert(obterStats().limiteDoenca === 0, "Apos curar + tick: limiteDoenca = 0");
 
@@ -339,6 +343,48 @@ assert(obterStats().faseEvolucao === 9, `Peso 90 de uma vez: fase = ${obterStats
 // Nao evolui se ja esta na fase certa
 ev = checarEvolucao();
 assert(ev === false, "Ja na fase 9: nao evolui de novo");
+
+// ============================================
+console.log("\n\x1b[36m=== TESTE 13: Sufixo de frames por fase ===\x1b[0m");
+// ============================================
+resetParaTeste();
+assert(getSufixoFase() === "", `Fase 1: sufixo = "" (obtido "${getSufixoFase()}")`);
+
+alterarStat("faseEvolucao", 2);
+assert(getSufixoFase() === "2", `Fase 2: sufixo = "2" (obtido "${getSufixoFase()}")`);
+
+alterarStat("faseEvolucao", 3);
+alterarStat("caminhoEvolucao", "tyrannosaurus");
+assert(getSufixoFase() === "3tyrannosaurus", `Fase 3 carne: sufixo = "3tyrannosaurus" (obtido "${getSufixoFase()}")`);
+
+alterarStat("caminhoEvolucao", "triceratops");
+assert(getSufixoFase() === "3triceratops", `Fase 3 vegetal: sufixo = "3triceratops" (obtido "${getSufixoFase()}")`);
+
+alterarStat("caminhoEvolucao", "brontosaurus");
+assert(getSufixoFase() === "3brontosaurus", `Fase 3 massa: sufixo = "3brontosaurus" (obtido "${getSufixoFase()}")`);
+
+alterarStat("faseEvolucao", 5);
+alterarStat("caminhoEvolucao", "tyrannosaurus");
+assert(getSufixoFase() === "5tyrannosaurus", `Fase 5: sufixo = "5tyrannosaurus" (obtido "${getSufixoFase()}")`);
+
+alterarStat("faseEvolucao", 7);
+assert(getSufixoFase() === "7tyrannosaurus", `Fase 7: sufixo = "7tyrannosaurus" (obtido "${getSufixoFase()}")`);
+
+alterarStat("faseEvolucao", 9);
+assert(getSufixoFase() === "9tyrannosaurus", `Fase 9: sufixo = "9tyrannosaurus" (obtido "${getSufixoFase()}")`);
+
+// Sem caminho definido na fase 3+ = fallback brontosaurus
+alterarStat("faseEvolucao", 3);
+alterarStat("caminhoEvolucao", "");
+assert(getSufixoFase() === "3brontosaurus", `Fase 3 sem caminho: fallback brontosaurus (obtido "${getSufixoFase()}")`);
+
+// Evolucao completa: peso 30 + dieta → fase 3 + sufixo correto
+resetParaTeste();
+alterarStat("peso", 30);
+alterarStat("dietaCarne", 10);
+checarEvolucao();
+assert(obterStats().faseEvolucao === 3, `Evolucao completa: fase = ${obterStats().faseEvolucao}`);
+assert(getSufixoFase() === "3tyrannosaurus", `Evolucao completa: sufixo = "${getSufixoFase()}"`);
 
 // ============================================
 // RESULTADO FINAL
