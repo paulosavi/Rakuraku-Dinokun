@@ -93,6 +93,33 @@
       <button id="debug-reset" style="width:100%; margin-top:4px; padding:6px; background:#7f1d1d; color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:11px;">Reset (novo jogo)</button>
       <button id="debug-forcar-tick" style="width:100%; margin-top:4px; padding:6px; background:#059669; color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:11px;">Forçar Tick (1 hora)</button>
       <button id="debug-test-degradacao" style="width:100%; margin-top:4px; padding:6px; background:#6d28d9; color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:11px;">Testar Degradação 24h</button>
+      <div style="margin-top:10px; border-top:1px solid #334155; padding-top:8px;">
+        <strong style="color:#7dd3fc; font-size:11px;">Evolução Rápida</strong>
+        <div style="display:flex; flex-wrap:wrap; gap:3px; margin-top:5px;">
+          <button class="debug-fase-btn" data-fase="1" data-caminho="" data-peso="1" style="flex:1; min-width:60px; padding:4px; background:#334155; color:#eee; border:none; border-radius:3px; cursor:pointer; font-size:10px;">F1 Bebê</button>
+          <button class="debug-fase-btn" data-fase="2" data-caminho="" data-peso="15" style="flex:1; min-width:60px; padding:4px; background:#334155; color:#eee; border:none; border-radius:3px; cursor:pointer; font-size:10px;">F2 Filhote</button>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:3px; margin-top:3px;">
+          <button class="debug-fase-btn" data-fase="3" data-caminho="tyrannosaurus" data-peso="30" data-dieta="carne" style="flex:1; padding:4px; background:#7f1d1d; color:#fca5a5; border:none; border-radius:3px; cursor:pointer; font-size:10px;">F3 T-Rex</button>
+          <button class="debug-fase-btn" data-fase="3" data-caminho="triceratops" data-peso="30" data-dieta="vegetal" style="flex:1; padding:4px; background:#14532d; color:#86efac; border:none; border-radius:3px; cursor:pointer; font-size:10px;">F3 Tricer</button>
+          <button class="debug-fase-btn" data-fase="3" data-caminho="brontosaurus" data-peso="30" data-dieta="massa" style="flex:1; padding:4px; background:#713f12; color:#fde68a; border:none; border-radius:3px; cursor:pointer; font-size:10px;">F3 Bronto</button>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:3px; margin-top:3px;">
+          <button class="debug-fase-btn" data-fase="5" data-caminho="tyrannosaurus" data-peso="50" data-dieta="carne" style="flex:1; padding:4px; background:#7f1d1d; color:#fca5a5; border:none; border-radius:3px; cursor:pointer; font-size:10px;">F5 T-Rex</button>
+          <button class="debug-fase-btn" data-fase="5" data-caminho="triceratops" data-peso="50" data-dieta="vegetal" style="flex:1; padding:4px; background:#14532d; color:#86efac; border:none; border-radius:3px; cursor:pointer; font-size:10px;">F5 Tricer</button>
+          <button class="debug-fase-btn" data-fase="5" data-caminho="brontosaurus" data-peso="50" data-dieta="massa" style="flex:1; padding:4px; background:#713f12; color:#fde68a; border:none; border-radius:3px; cursor:pointer; font-size:10px;">F5 Bronto</button>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:3px; margin-top:3px;">
+          <button class="debug-fase-btn" data-fase="7" data-caminho="tyrannosaurus" data-peso="70" data-dieta="carne" style="flex:1; padding:4px; background:#7f1d1d; color:#fca5a5; border:none; border-radius:3px; cursor:pointer; font-size:10px;">F7 T-Rex</button>
+          <button class="debug-fase-btn" data-fase="7" data-caminho="triceratops" data-peso="70" data-dieta="vegetal" style="flex:1; padding:4px; background:#14532d; color:#86efac; border:none; border-radius:3px; cursor:pointer; font-size:10px;">F7 Tricer</button>
+          <button class="debug-fase-btn" data-fase="7" data-caminho="brontosaurus" data-peso="70" data-dieta="massa" style="flex:1; padding:4px; background:#713f12; color:#fde68a; border:none; border-radius:3px; cursor:pointer; font-size:10px;">F7 Bronto</button>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:3px; margin-top:3px;">
+          <button class="debug-fase-btn" data-fase="9" data-caminho="tyrannosaurus" data-peso="90" data-dieta="carne" style="flex:1; padding:4px; background:#7f1d1d; color:#fca5a5; border:none; border-radius:3px; cursor:pointer; font-size:10px;">F9 T-Rex</button>
+          <button class="debug-fase-btn" data-fase="9" data-caminho="triceratops" data-peso="90" data-dieta="vegetal" style="flex:1; padding:4px; background:#14532d; color:#86efac; border:none; border-radius:3px; cursor:pointer; font-size:10px;">F9 Tricer</button>
+          <button class="debug-fase-btn" data-fase="9" data-caminho="brontosaurus" data-peso="90" data-dieta="massa" style="flex:1; padding:4px; background:#713f12; color:#fde68a; border:none; border-radius:3px; cursor:pointer; font-size:10px;">F9 Bronto</button>
+        </div>
+      </div>
       <div id="debug-log" style="margin-top:8px; font-size:10px; color:#94a3b8; white-space:pre-wrap; max-height:200px; overflow-y:auto;"></div>
     </div>
 
@@ -100,6 +127,7 @@
       import { obterStats, alterarStat, salvarStats, resetarStats, carregarStats, degradarStats } from "./js/principal/stats.js";
       import { carregarEstado, limparEstado, salvarEstado } from "./js/principal/saveSystem.js";
       import { definirHora, getHoras, getMinutos } from "./js/principal/relogioInterno.js";
+      import { recarregarFramesParaFaseAtual } from "./js/frames/dinoFase1frames.js";
 
       const editableStats = [
         { key: "fome", label: "Fome", min: 0, max: 4, type: "number" },
@@ -198,6 +226,26 @@
 
       document.getElementById("debug-close").addEventListener("click", () => {
         document.getElementById("debug-panel").style.display = "none";
+      });
+
+      document.querySelectorAll(".debug-fase-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const fase = parseInt(btn.dataset.fase);
+          const caminho = btn.dataset.caminho || "";
+          const peso = parseInt(btn.dataset.peso);
+          const dieta = btn.dataset.dieta || "";
+
+          alterarStat("faseEvolucao", fase);
+          alterarStat("caminhoEvolucao", caminho);
+          alterarStat("peso", peso);
+          alterarStat("dietaCarne", dieta === "carne" ? 10 : 0);
+          alterarStat("dietaVegetal", dieta === "vegetal" ? 10 : 0);
+          alterarStat("dietaMassa", dieta === "massa" ? 10 : 0);
+          salvarStats();
+          await recarregarFramesParaFaseAtual();
+          refreshFields();
+          document.getElementById("debug-log").textContent = "✓ Fase " + fase + (caminho ? " " + caminho : "") + " (" + new Date().toLocaleTimeString() + ")";
+        });
       });
 
       document.getElementById("debug-forcar-tick").addEventListener("click", () => {
