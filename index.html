@@ -78,6 +78,10 @@
           <label style="color:#94a3b8; font-size:11px;">Ar Condicionado</label>
           <input id="dbg-ac" type="checkbox" style="width:auto;">
         </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin:3px 0;">
+          <label style="color:#94a3b8; font-size:11px;">Som</label>
+          <input id="dbg-som" type="checkbox" checked style="width:auto;">
+        </div>
       </div>
       <div style="margin-top:10px; border-top:1px solid #334155; padding-top:8px;">
         <strong style="color:#7dd3fc; font-size:11px;">Relógio Interno</strong>
@@ -128,6 +132,7 @@
       import { carregarEstado, limparEstado, salvarEstado } from "./js/principal/saveSystem.js";
       import { definirHora, getHoras, getMinutos } from "./js/principal/relogioInterno.js";
       import { recarregarFramesParaFaseAtual } from "./js/frames/dinoFase1frames.js";
+      import { alterarSom, somEstaLigado } from "./js/principal/som.js";
 
       const editableStats = [
         { key: "fome", label: "Fome", min: 0, max: 4, type: "number" },
@@ -155,6 +160,7 @@
         const estado = carregarEstado() || {};
         document.getElementById("dbg-luz").checked = estado.estadoLuz === true;
         document.getElementById("dbg-ac").checked = estado.estadoAC === "ligar";
+        document.getElementById("dbg-som").checked = somEstaLigado();
       }
 
       function buildDebugFields() {
@@ -215,6 +221,7 @@
           estadoLuz: document.getElementById("dbg-luz").checked,
           estadoAC: document.getElementById("dbg-ac").checked ? "ligar" : "desligar"
         });
+        alterarSom(document.getElementById("dbg-som").checked);
         document.getElementById("debug-log").textContent = "✓ Stats aplicados! (" + new Date().toLocaleTimeString() + ")";
       });
 

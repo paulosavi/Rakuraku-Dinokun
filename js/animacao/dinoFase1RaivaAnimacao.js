@@ -1,7 +1,9 @@
 import { carregarFramesPorFase, idleFrames } from "../frames/dinoFase1frames.js";
 import { iniciarJokenpo } from "../jogoJokenpo/iniciarJokenpo.js";
+import { tocar } from "../principal/som.js";
 
 async function dinoFase1Raiva(){
+   tocar("sad");
    var losingFrames = await carregarFramesPorFase("losing");
    var frameNormal = idleFrames[0] || $();
    var frameRaiva = losingFrames[1] || losingFrames[0] || $();

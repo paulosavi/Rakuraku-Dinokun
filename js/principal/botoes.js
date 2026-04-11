@@ -11,6 +11,7 @@ import { alterarEstadoAtualDoArcondicionado } from "../outrosRecursos/painelDoAr
 import { habilitarEventosIniciais } from "./telaInicial.js";
 import { carregarStats, obterStats } from "./stats.js";
 import { iniciarGameLoop } from "./gameLoop.js";
+import { tocar } from "./som.js";
 
 function pressionarBotao(elemento){
     let heightBotao = $(elemento).css("height");
@@ -84,25 +85,30 @@ window.__aoMorrer = aoMorrer;
 
 $("#enter").on("click", function(){
     pressionarBotao(this);
+    tocar("beep");
     botaoEnter();
 });
 
 $("#botao-select-esquerdo").on("click", function(){
     pressionarBotao(this);
+    tocar("beep");
     botaoEsquerdo();
 });
 
 $("#botao-select-direito").on("click", function(){
     pressionarBotao(this);
+    tocar("beep");
     botaoDireito();
 });
 
 $("#esc").on("click", function(){
     pressionarBotao(this);
+    tocar("beep");
     botaoEsc();
 });
 
 $("#clock").on("click", function(){
     pressionarBotao(this);
+    tocar("beep");
     botaoClock();
 });

@@ -6,6 +6,7 @@ import { alterarContadorLanceDoJogador, alterarPontosDoJogador, contadorLanceDoJ
 import { inicioDoJogo, lancesDoJogadorFrames, lancesDoDinoFrames } from "./jogoJokenpoFrames.js";
 import { alterarPontosDoDino, pontosDoDino } from "./mostrarLanceDoDino.js";
 import { estaNatelaPrincipal } from "../principal/telaPrincipal.js";
+import { tocar } from "../principal/som.js";
 
 var tiposDeLance = ["papel", "pedra", "tesoura"];
 
@@ -16,6 +17,7 @@ function entrarNoJogo(boleano){
 }
 
 function iniciarJokenpo(){
+    tocar("playing");
     estaNatelaPrincipal(false)
     let contador = 0;
     const intervalo = setInterval(()=>{

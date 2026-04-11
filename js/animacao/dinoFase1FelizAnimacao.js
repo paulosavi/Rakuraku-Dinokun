@@ -2,8 +2,10 @@ import { carregarFramesPorFase, idleFrames } from "../frames/dinoFase1frames.js"
 import { iniciarJokenpo } from "../jogoJokenpo/iniciarJokenpo.js";
 import { atividade } from "../principal/telaInicial.js"
 import { voltarParaTelaPrincipal } from "../principal/telaPrincipal.js"
+import { tocar } from "../principal/som.js";
 
 async function dinoFase1Feliz(){
+   tocar("happy");
    var celebratingFrames = await carregarFramesPorFase("celebrating");
    var frameNormal = idleFrames[0] || $();
    var frameFeliz = celebratingFrames[1] || celebratingFrames[0] || $();

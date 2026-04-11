@@ -2,6 +2,7 @@ import { obterStats, degradarStats, alterarStat, salvarStats, checarEvolucao } f
 import { carregarEstado } from "./saveSystem.js";
 import { agora, getHoras, getDate } from "./relogioInterno.js";
 import { recarregarFramesParaFaseAtual } from "../frames/dinoFase1frames.js";
+import { tocar } from "./som.js";
 
 var intervaloGameLoop = null;
 var callbackMorte = null;  // callback chamado quando o pet morre
@@ -100,6 +101,13 @@ async function tick() {
     if (morreu) {
         pararGameLoop();
         if (callbackMorte) callbackMorte();
+        return;
+    }
+
+    // Alerta sonoro quando stats críticos
+    stats = obterStats();
+    if (stats.doente || stats.comFrio || stats.comCalor || stats.fome === 0 || stats.sede === 0) {
+        tocar("alert");
     }
 }
 
