@@ -31,6 +31,7 @@
 #include "pet_state.h"
 #include "pet_clock.h"
 #include "pet_save.h"
+#include "pet_som.h"
 
 #define SCREEN_WIDTH  128
 #define SCREEN_HEIGHT 64
@@ -191,13 +192,15 @@ void drawFaixaAmarela(const char* centroOverride = nullptr) {
         display.print(centroOverride);
     }
 
+    // Mesma ordem do escolherSpriteAtual (dinoFase1Animacao.js:24):
+    // morto > dormindo > doente > calor > frio > sujo
     const char* indic = nullptr;
     if (!pet.vivo) indic = "X";
-    else if (pet.doente) indic = "Sic";
     else if (pet.dormindo) indic = "Zz";
-    else if (pet.sujo) indic = "Suj";
-    else if (pet.comFrio) indic = "Frio";
+    else if (pet.doente) indic = "Sic";
     else if (pet.comCalor) indic = "Cal";
+    else if (pet.comFrio) indic = "Frio";
+    else if (pet.sujo) indic = "Suj";
     if (indic) {
         int largura = strlen(indic) * 6;
         display.setCursor(SCREEN_WIDTH - largura, 4);
@@ -367,12 +370,13 @@ void drawTelaStats() {
 
     y += 8;
     display.setCursor(0, y);
+    // Mesma ordem do escolherSpriteAtual
     if (!pet.vivo) display.print("Morto");
-    else if (pet.doente) display.print("Doente");
     else if (pet.dormindo) display.print("Dormindo");
-    else if (pet.sujo) display.print("Sujo");
-    else if (pet.comFrio) display.print("Com frio");
+    else if (pet.doente) display.print("Doente");
     else if (pet.comCalor) display.print("Com calor");
+    else if (pet.comFrio) display.print("Com frio");
+    else if (pet.sujo) display.print("Sujo");
     else display.print("Estado: Bem");
 }
 
@@ -390,26 +394,56 @@ const unsigned long DEBOUNCE_MS = 40;
 // ---------------------------------------------------------------------
 UIMode uiMode = UI_PRINCIPAL;
 
-// Execucao de acao
-SpriteAnim acaoAnim = { SPRITE_IDLE, SPRITE_IDLE_FRAMES, "idle" };
+// Timeout sem interacao: volta pra tela principal apos 10s parado em qualquer menu
+// (intervaloSemInteracao.js do original)
+const unsigned long INATIVIDADE_MS = 10000;
+unsigned long ultimaInteracaoMs = 0;
+
+// Execucao de acao (com chain opcional pra pos-animacao tipo arroto/celebrar)
+SpriteAnim acaoAnim     = { SPRITE_IDLE, SPRITE_IDLE_FRAMES, "idle" };
+SpriteAnim acaoProxima  = { SPRITE_IDLE, SPRITE_IDLE_FRAMES, "idle" };
+bool acaoTemProxima = false;
 unsigned long acaoInicio = 0;
 unsigned long acaoDuracaoMs = 2500;
 unsigned long acaoFrameMs = 1000;  // ms por frame durante a acao
 
+// Helpers pra configurar acao com duracao proporcional aos frames
+void agendarAcao(SpriteAnim primeira) {
+    acaoAnim = primeira;
+    acaoFrameMs = 1000;
+    acaoDuracaoMs = (unsigned long)primeira.frames * acaoFrameMs;
+    acaoTemProxima = false;
+    acaoInicio = millis();
+    uiMode = UI_EXECUTANDO_ACAO;
+}
+void agendarAcaoChain(SpriteAnim primeira, SpriteAnim segunda) {
+    acaoAnim = primeira;
+    acaoProxima = segunda;
+    acaoTemProxima = true;
+    acaoFrameMs = 1000;
+    acaoDuracaoMs = (unsigned long)primeira.frames * acaoFrameMs;
+    acaoInicio = millis();
+    uiMode = UI_EXECUTANDO_ACAO;
+}
+
 void iniciarAcao(uint8_t acao) {
     // Fiel ao js/principal/stats.js — comer/beber sobe 1; carinho sobe EDUCACAO; medicar zera medidores
+    SpriteAnim arroto    = { SPRITE_SWALLOWING,  SPRITE_SWALLOWING_FRAMES,  "arrotando" };
+    SpriteAnim festa     = { SPRITE_CELEBRATING, SPRITE_CELEBRATING_FRAMES, "feliz" };
+
     switch (acao) {
         case ACAO_BANHO:
             pet.sujo = false;
-            acaoAnim = { SPRITE_BATH, SPRITE_BATH_FRAMES, "banho" };
+            // bath -> celebrating (dinoFase1Feliz no original)
+            agendarAcaoChain({ SPRITE_BATH, SPRITE_BATH_FRAMES, "banho" }, festa);
             break;
         case ACAO_BEBER:
             if (pet.sede < 4) pet.sede++;
             if (pet.comidaPendente < 200) pet.comidaPendente++;
-            acaoAnim = { SPRITE_DRINKING, SPRITE_DRINKING_FRAMES, "beber" };
+            // drinking -> swallowing (arroto, dinoArrotando.js)
+            agendarAcaoChain({ SPRITE_DRINKING, SPRITE_DRINKING_FRAMES, "beber" }, arroto);
             break;
         case ACAO_MEDICAR:
-            // Cura, mas zera os medidores (stats.js:170-180)
             if (pet.doente) {
                 pet.doente = false;
                 pet.horasDoente = 0;
@@ -419,18 +453,18 @@ void iniciarAcao(uint8_t acao) {
                 pet.humor = 0;
                 pet.educacao = 0;
             }
-            acaoAnim = { SPRITE_APPLYINGINJECTION, SPRITE_APPLYINGINJECTION_FRAMES, "medicar" };
+            agendarAcao({ SPRITE_APPLYINGINJECTION, SPRITE_APPLYINGINJECTION_FRAMES, "medicar" });
             break;
         case ACAO_CARINHO:
             if (pet.educacao < 4) pet.educacao++;
-            acaoAnim = { SPRITE_CARESSING, SPRITE_CARESSING_FRAMES, "carinho" };
+            agendarAcao({ SPRITE_CARESSING, SPRITE_CARESSING_FRAMES, "carinho" });
             break;
         case ACAO_LER:
             if (pet.educacao < 4) pet.educacao++;
-            acaoAnim = { SPRITE_READING, SPRITE_READING_FRAMES, "ler" };
+            agendarAcao({ SPRITE_READING, SPRITE_READING_FRAMES, "ler" });
             break;
         case ACAO_ABRIR_LUZ:
-            switchEscolha = pet.estadoLuz ? 0 : 1;  // reflete estado atual
+            switchEscolha = pet.estadoLuz ? 0 : 1;
             uiMode = UI_PAINEL_LUZ;
             return;
         case ACAO_ABRIR_AC:
@@ -438,8 +472,8 @@ void iniciarAcao(uint8_t acao) {
             uiMode = UI_PAINEL_AC;
             return;
         case ACAO_JOGAR:
-            tone(BUZZER, 600, 120); delay(140);
-            tone(BUZZER, 400, 180);
+            // Fase 6 implementa jokenpo. Por enquanto so toca o som de inicio.
+            somTocar(SOM_PLAYING);
             uiMode = UI_PRINCIPAL;
             return;
         case ACAO_NECESSIDADES:
@@ -447,14 +481,10 @@ void iniciarAcao(uint8_t acao) {
             uiMode = UI_NECESSIDADES;
             return;
     }
-    acaoInicio = millis();
-    acaoDuracaoMs = 2500;
-    acaoFrameMs = 1000;
-    uiMode = UI_EXECUTANDO_ACAO;
     saveGravar(clockGetTotalHours());
 }
 
-// Come uma comida especifica: animacao + stats + dieta
+// Come uma comida: animacao do tipo + arroto, atualiza stats e dieta
 void comerComida(uint8_t idx) {
     const Comida& c = COMIDAS[idx];
     if (pet.fome < 4) pet.fome++;
@@ -465,11 +495,8 @@ void comerComida(uint8_t idx) {
         case 4: if (pet.dietaVegetal < 255) pet.dietaVegetal++; break;
         // 3 (especial/sorvete) nao conta dieta
     }
-    acaoAnim = { c.anim, c.animFrames, c.nome };
-    acaoInicio = millis();
-    acaoDuracaoMs = 2500;
-    acaoFrameMs = 1000;
-    uiMode = UI_EXECUTANDO_ACAO;
+    SpriteAnim arroto = { SPRITE_SWALLOWING, SPRITE_SWALLOWING_FRAMES, "arrotando" };
+    agendarAcaoChain({ c.anim, c.animFrames, c.nome }, arroto);
     saveGravar(clockGetTotalHours());
 }
 
@@ -508,14 +535,21 @@ void iniciarNascimento() {
 
 // callback: recebe indice (0..5) do botao recem pressionado
 void onButtonPressed(uint8_t idx) {
-    tone(BUZZER, 1200, 20);
+    // Durante uma acao em execucao, todos os botoes sao IGNORADOS (acoes nao cancelaveis)
+    if (uiMode == UI_EXECUTANDO_ACAO) return;
+
+    somTocar(SOM_BEEP);
     Serial.print("Botao: "); Serial.println(BTN_NAMES[idx]);
+
+    // qualquer interacao reseta o timer de inatividade
+    ultimaInteracaoMs = millis();
 
     switch (uiMode) {
         case UI_PRINCIPAL:
             if (idx == 3) { uiMode = UI_SELECAO; atividadeSel = 0; }
             else if (idx == 2) { uiMode = UI_SELECAO; atividadeSel = NUM_ATIVIDADES - 1; }
             else if (idx == 5) { uiMode = UI_STATS; }
+            // CIMA: nao faz nada no toque simples — segurar 3s avanca hora (checarHoldCima)
             break;
 
         case UI_SELECAO:
@@ -565,7 +599,7 @@ void onButtonPressed(uint8_t idx) {
             break;
 
         case UI_EXECUTANDO_ACAO:
-            if (idx == 5) uiMode = UI_PRINCIPAL;
+            // tratado no return no topo
             break;
     }
 }
@@ -580,6 +614,54 @@ void handleButtons() {
             btnLastState[i] = s;
         }
     }
+}
+
+// ---------------------------------------------------------------------
+// HOLD DO CIMA -> a cada 3s segurando, avanca 1 hora virtual (debug)
+// Continuar segurando = mais 3s = mais 1 hora
+// ---------------------------------------------------------------------
+const unsigned long CIMA_HOLD_TICK_MS = 3000;
+unsigned long cimaHoldInicio = 0;
+
+void checarHoldCima() {
+    bool pressionado = (digitalRead(BTN_UP) == LOW);
+    if (pressionado && uiMode == UI_PRINCIPAL) {
+        if (cimaHoldInicio == 0) {
+            cimaHoldInicio = millis();
+        } else if ((millis() - cimaHoldInicio) >= CIMA_HOLD_TICK_MS) {
+            clockAvancarHora();
+            Serial.println(">> TICK FORCADO (hold 3s)");
+            tone(BUZZER, 1500, 60);
+            cimaHoldInicio = millis();  // reseta — continuar segurando avanca outra hora em mais 3s
+        }
+    } else {
+        cimaHoldInicio = 0;
+    }
+}
+
+// Overlay com barra de progresso enquanto segura CIMA
+void desenharOverlayHoldCima() {
+    if (cimaHoldInicio == 0) return;
+    unsigned long decorrido = millis() - cimaHoldInicio;
+    if (decorrido < 400) return;  // evita flash em toque rapido
+
+    const int boxX = 8;
+    const int boxY = 24;
+    const int boxW = 112;
+    const int boxH = 26;
+
+    display.fillRect(boxX, boxY, boxW, boxH, BLACK);
+    display.drawRect(boxX, boxY, boxW, boxH, WHITE);
+
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    display.setCursor(boxX + 4, boxY + 4);
+    display.print("Avancando hora...");
+
+    int largura = (int)((decorrido * (boxW - 8)) / CIMA_HOLD_TICK_MS);
+    if (largura > boxW - 8) largura = boxW - 8;
+    display.drawRect(boxX + 4, boxY + 16, boxW - 8, 5, WHITE);
+    display.fillRect(boxX + 4, boxY + 16, largura, 5, WHITE);
 }
 
 // ---------------------------------------------------------------------
@@ -667,8 +749,22 @@ void atualizarAnimacao() {
     if (uiMode == UI_EXECUTANDO_ACAO) {
         unsigned long now = millis();
         if (now - acaoInicio >= acaoDuracaoMs) {
-            uiMode = UI_PRINCIPAL;
-            nova = escolherSpriteAtual();
+            if (acaoTemProxima) {
+                // transiciona pra pos-animacao (ex: arrotando, celebrating)
+                acaoAnim = acaoProxima;
+                acaoTemProxima = false;
+                acaoInicio = millis();
+                acaoDuracaoMs = (unsigned long)acaoAnim.frames * acaoFrameMs;
+                nova = acaoAnim;
+                frameMs = acaoFrameMs;
+                // Som "happy" quando comeca a celebrar (dinoFase1FelizAnimacao.js)
+                if (acaoAnim.data == SPRITE_CELEBRATING) {
+                    somTocar(SOM_HAPPY);
+                }
+            } else {
+                uiMode = UI_PRINCIPAL;
+                nova = escolherSpriteAtual();
+            }
         } else {
             nova = acaoAnim;
             frameMs = acaoFrameMs;
@@ -708,7 +804,7 @@ void setup() {
     display.clearDisplay();
     display.display();
 
-    pinMode(BUZZER, OUTPUT);
+    somInit(BUZZER);
     for (uint8_t i = 0; i < 6; i++) pinMode(BTN_PINS[i], INPUT_PULLUP);
 
     randomSeed(analogRead(A0) ^ micros());
@@ -746,7 +842,19 @@ void loop() {
 
     handleButtons();
     checarHoldReset();
+    checarHoldCima();
     atualizarAnimacao();
+    somAtualizar();
+
+    // Auto-volta pra tela principal apos 10s sem interacao em qualquer menu
+    // (intervaloSemInteracao.js do original)
+    bool emMenu = (uiMode == UI_SELECAO || uiMode == UI_SUBMENU_COMIDA ||
+                   uiMode == UI_PAINEL_LUZ || uiMode == UI_PAINEL_AC ||
+                   uiMode == UI_NECESSIDADES || uiMode == UI_STATS);
+    if (emMenu && (millis() - ultimaInteracaoMs) > INATIVIDADE_MS) {
+        Serial.println("Timeout sem interacao - voltando para tela principal");
+        uiMode = UI_PRINCIPAL;
+    }
 
     // relogio virtual
     clockTick();
@@ -772,7 +880,12 @@ void loop() {
         Serial.print(" Doente="); Serial.print(pet.doente);
         Serial.print(" Vivo="); Serial.println(pet.vivo);
 
-        if (morreu) tone(BUZZER, 200, 500);
+        if (morreu) {
+            somTocar(SOM_SAD);
+        } else if (pet.doente || pet.comFrio || pet.comCalor || pet.fome == 0 || pet.sede == 0) {
+            // Alerta sonoro quando stats criticos (gameLoop.js:108-110)
+            somTocar(SOM_ALERT);
+        }
     }
 
     display.clearDisplay();
@@ -792,6 +905,7 @@ void loop() {
     }
 
     desenharOverlayHoldReset();
+    desenharOverlayHoldCima();
 
     display.display();
     delay(20);

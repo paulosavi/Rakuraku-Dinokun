@@ -50,3 +50,9 @@ bool clockHourChanged() {
     }
     return false;
 }
+
+void clockAvancarHora() {
+    horasTotais++;
+    millisUltimaHora = millis();
+    sinalizadorNovaHora = true;
+}

@@ -3,10 +3,10 @@
 
 // Tempo real (ms) por hora virtual do jogo.
 // DEV lento:   60000    -> 1min real = 1h virtual (minutos virtuais passam 1/seg)
-// DEV rapido:  10000    -> 10s = 1h (degrada em segundos, mas minutos virtuais passam rapido demais)
-// PROD:        3600000  -> 1h real = 1h virtual (fiel ao original)
+// DEV rapido:  10000    -> 10s = 1h
+// PROD:        3600000  -> 1h real = 1h virtual (fiel ao Tamagotchi original)
 #ifndef MILLIS_POR_HORA
-#define MILLIS_POR_HORA 60000UL
+#define MILLIS_POR_HORA 3600000UL
 #endif
 
 // Hora virtual inicial quando nao ha save (0..23)
@@ -20,3 +20,4 @@ uint8_t clockGetMinute();        // 0..59 (interpolado dentro da hora virtual)
 uint8_t clockGetSecond();        // 0..59 (interpolado dentro da hora virtual)
 uint32_t clockGetTotalHours();   // horas totais desde o nascimento
 bool clockHourChanged();         // true uma unica vez por nova hora virtual
+void clockAvancarHora();         // debug: forca uma hora virtual a passar imediatamente
