@@ -181,7 +181,10 @@ uint8_t atividadeSel = 0;
 // forward decls: definidos mais abaixo, usados em draw*
 extern SpriteAnim currentAnim;
 extern uint8_t currentFrame;
+extern unsigned long lastFrameTime;
+extern const unsigned long FRAME_MS;
 extern JokenpoState jkp;
+extern UIMode uiMode;
 void iniciarJokenpo();
 
 // Desenha icone 32x32 em (x,y)
@@ -302,14 +305,74 @@ void drawTelaJokenpo() {
     }
 }
 
+// Métricas pra interpolação suave entre frames (X/Y min de cada frame).
+// Pra cada par consecutivo (i -> i+1), guarda o delta lógico em colunas/linhas.
+// Durante a transição entre frames, deslocamos o desenho de tela proporcionalmente.
+struct AnimMetrics {
+    int8_t deltaX[8];
+    int8_t deltaY[8];
+};
+AnimMetrics currentMetrics;
+SpriteRef metricsForAnim = nullptr;
+
+void calcularMetricasAnimacao() {
+    if (metricsForAnim == currentAnim.data) return;
+    metricsForAnim = currentAnim.data;
+
+    int8_t xmin[8], ymin[8];
+    uint8_t n = currentAnim.frames;
+    if (n > 8) n = 8;
+
+    for (uint8_t f = 0; f < n; f++) {
+        int xm = SPRITE_COLS, ym = SPRITE_ROWS;
+        for (int y = 0; y < SPRITE_ROWS; y++) {
+            uint32_t bits = pgm_read_dword(&currentAnim.data[f][y]);
+            if (bits == 0) continue;
+            if (y < ym) ym = y;
+            for (int x = 0; x < SPRITE_COLS; x++) {
+                if (bits & (1UL << x)) {
+                    if (x < xm) xm = x;
+                    break;  // ja achei x min desta linha
+                }
+            }
+        }
+        xmin[f] = (xm == SPRITE_COLS) ? 0 : xm;
+        ymin[f] = (ym == SPRITE_ROWS) ? 0 : ym;
+    }
+    for (uint8_t i = 0; i < n; i++) {
+        uint8_t next = (uint8_t)((i + 1) % n);
+        currentMetrics.deltaX[i] = xmin[next] - xmin[i];
+        currentMetrics.deltaY[i] = ymin[next] - ymin[i];
+    }
+}
+
 // Tela principal: faixa amarela + dino em tamanho cheio (SCALE=3)
 void drawTelaPrincipal() {
     drawFaixaAmarela();
 
-    int spriteW = SPRITE_COLS * SPRITE_SCALE;   // 57
-    int spriteH = SPRITE_ROWS * SPRITE_SCALE;   // 48
-    int originX = (SCREEN_WIDTH - spriteW) / 2; // 35
-    int originY = AREA_AZUL_Y;                  // 16 (dino 48 de altura cabe exato)
+    int spriteW = SPRITE_COLS * SPRITE_SCALE;
+    int originX = (SCREEN_WIDTH - spriteW) / 2;
+    int originY = AREA_AZUL_Y;
+
+    /*
+    // ===== INTERPOLAÇÃO SUAVE ENTRE FRAMES (Opção B) — desativada =====
+    // Desliza o frame atual em direção à posição do próximo frame durante o
+    // intervalo de 1000ms, usando deltaX/Y pré-calculados (calcularMetricasAnimacao).
+    // Reative se quiser movimento mais natural.
+    if (uiMode == UI_PRINCIPAL && pet.vivo && !pet.dormindo) {
+        calcularMetricasAnimacao();
+        unsigned long elapsed = millis() - lastFrameTime;
+        if (elapsed > FRAME_MS) elapsed = FRAME_MS;
+        int8_t dx = currentMetrics.deltaX[currentFrame];
+        int8_t dy = currentMetrics.deltaY[currentFrame];
+        int offsetX = (int)((long)elapsed * dx * SPRITE_SCALE / (long)FRAME_MS);
+        int offsetY = (int)((long)elapsed * dy * SPRITE_SCALE / (long)FRAME_MS);
+        drawSprite(currentAnim.data, currentFrame,
+                   originX + offsetX, originY + offsetY, SPRITE_SCALE);
+        return;
+    }
+    */
+
     drawSprite(currentAnim.data, currentFrame, originX, originY, SPRITE_SCALE);
 }
 
