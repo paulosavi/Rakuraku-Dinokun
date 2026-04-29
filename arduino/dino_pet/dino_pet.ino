@@ -32,6 +32,7 @@
 #include "pet_clock.h"
 #include "pet_save.h"
 #include "pet_som.h"
+#include "pet_sprites.h"
 
 #define SCREEN_WIDTH  128
 #define SCREEN_HEIGHT 64
@@ -63,7 +64,28 @@ enum UIMode {
     UI_PAINEL_AC,          // switch ligar/desligar ar cond
     UI_NECESSIDADES,       // 6 sub-telas de stats (humor/temp/sede/fome/peso/edu)
     UI_STATS,              // tela textual completa (ESC)
+    UI_JOKENPO,            // jogo pedra/papel/tesoura
     UI_EXECUTANDO_ACAO
+};
+
+enum JokenpoFase {
+    JKP_PREPARING = 0,     // mostra preparingToPlay por 3s
+    JKP_PLAYER_CHOOSING,   // jogador navega papel/pedra/tesoura, ENTER confirma; ESC sai
+    JKP_SHOWING_BOTH,      // mostra os 2 lances por 2s
+    JKP_ROUND_HAPPY,       // dino venceu a rodada — anim feliz 4s
+    JKP_ROUND_SAD,         // dino nao venceu/empatou a rodada — anim triste 4s
+    JKP_FINAL_HAPPY,       // dino venceu o jogo (5 rodadas) — anim feliz 4s, depois reinicia
+    JKP_FINAL_SAD          // dino nao venceu o jogo — anim triste 4s, depois reinicia
+};
+
+struct JokenpoState {
+    uint8_t fase;
+    uint8_t rodada;        // 0..4
+    uint8_t pontosDino;
+    uint8_t pontosJogador;
+    uint8_t lanceJogador;  // 0=papel, 1=pedra, 2=tesoura
+    uint8_t lanceDino;
+    uint32_t inicioFase;
 };
 
 enum Acao {
@@ -124,21 +146,20 @@ const uint8_t NUM_ATIVIDADES = sizeof(ATIVIDADES) / sizeof(ATIVIDADES[0]);
 
 // ---------------------------------------------------------------------
 // COMIDAS — 6 opcoes (stats.js:99-106): carne/massa/especial/vegetal
+// Sprites obtidos via spriteEating()/spriteSelectingFood() — só fase 1 no original
 // ---------------------------------------------------------------------
 struct Comida {
     const char* nome;
-    SpriteRef icone;       uint8_t iconeFrames;   // selectingX
-    SpriteRef anim;        uint8_t animFrames;    // eatingX
     uint8_t categoria;     // 1=carne, 2=massa, 3=especial, 4=vegetal
 };
 
 const Comida COMIDAS[] = {
-    { "Hamburger", SPRITE_SELECTINGSANDWICH, SPRITE_SELECTINGSANDWICH_FRAMES, SPRITE_EATINGSANDWICH, SPRITE_EATINGSANDWICH_FRAMES, 1 },
-    { "Macarrao",  SPRITE_SELECTINGNOODLES,  SPRITE_SELECTINGNOODLES_FRAMES,  SPRITE_EATINGNOODLES,  SPRITE_EATINGNOODLES_FRAMES,  2 },
-    { "Sorvete",   SPRITE_SELECTINGICECREAM, SPRITE_SELECTINGICECREAM_FRAMES, SPRITE_EATINGICECREAM, SPRITE_EATINGICECREAM_FRAMES, 3 },
-    { "Cenoura",   SPRITE_SELECTINGCARROT,   SPRITE_SELECTINGCARROT_FRAMES,   SPRITE_EATINGCARROT,   SPRITE_EATINGCARROT_FRAMES,   4 },
-    { "Maca",      SPRITE_SELECTINGAPPLE,    SPRITE_SELECTINGAPPLE_FRAMES,    SPRITE_EATINGAPPLE,    SPRITE_EATINGAPPLE_FRAMES,    4 },
-    { "Coxa",      SPRITE_SELECTINGDRUMSTICK,SPRITE_SELECTINGDRUMSTICK_FRAMES,SPRITE_EATINGDRUMSTICK,SPRITE_EATINGDRUMSTICK_FRAMES,1 }
+    { "Hamburger", 1 },
+    { "Macarrao",  2 },
+    { "Sorvete",   3 },
+    { "Cenoura",   4 },
+    { "Maca",      4 },
+    { "Coxa",      1 }
 };
 const uint8_t NUM_COMIDAS = sizeof(COMIDAS) / sizeof(COMIDAS[0]);
 uint8_t comidaSel = 0;
@@ -160,6 +181,8 @@ uint8_t atividadeSel = 0;
 // forward decls: definidos mais abaixo, usados em draw*
 extern SpriteAnim currentAnim;
 extern uint8_t currentFrame;
+extern JokenpoState jkp;
+void iniciarJokenpo();
 
 // Desenha icone 32x32 em (x,y)
 void drawIcon32(const uint32_t* bmp, int x, int y) {
@@ -210,6 +233,75 @@ void drawFaixaAmarela(const char* centroOverride = nullptr) {
     display.drawFastHLine(0, STATUS_BAR_H - 1, SCREEN_WIDTH, WHITE);
 }
 
+// Tela do jokenpô — fiel a js/jogoJokenpo/ e dinoFase1Feliz/Raiva
+void drawTelaJokenpo() {
+    char titulo[32];
+    snprintf(titulo, sizeof(titulo), "R%d/5 V:%d D:%d",
+             jkp.rodada + 1, jkp.pontosJogador, jkp.pontosDino);
+    drawFaixaAmarela(titulo);
+
+    // Mãos do jokenpô na matriz 16x19 inteira (scale 3, fiel ao display original)
+    int scale = SPRITE_SCALE;  // 3
+    int spriteW = SPRITE_COLS * scale;     // 57
+    int originX = (SCREEN_WIDTH - spriteW) / 2;
+    int originY = AREA_AZUL_Y;             // 16
+
+    auto playerSprite = [](uint8_t lance) -> SpriteData {
+        if (lance == 0) return spritePlayerPaper();
+        if (lance == 1) return spritePlayerRock();
+        return spritePlayerScissors();
+    };
+    auto dinoSprite = [](uint8_t lance) -> SpriteData {
+        if (lance == 0) return spritePetPlayPaper();
+        if (lance == 1) return spritePetPlayRock();
+        return spritePetPlayScissors();
+    };
+
+    uint32_t decorrido = millis() - jkp.inicioFase;
+
+    switch (jkp.fase) {
+        case JKP_PREPARING: {
+            SpriteData s = spritePreparingToPlay();
+            uint8_t f = (decorrido / 500) % s.frames;
+            drawSprite(s.ref, f, originX, originY, scale);
+            break;
+        }
+        case JKP_PLAYER_CHOOSING: {
+            // Mostra só a mão do jogador (lado esquerdo da matriz)
+            SpriteData s = playerSprite(jkp.lanceJogador);
+            drawSprite(s.ref, 0, originX, originY, scale);
+            display.fillTriangle(0, SCREEN_HEIGHT/2+4, 6, SCREEN_HEIGHT/2, 6, SCREEN_HEIGHT/2+8, WHITE);
+            display.fillTriangle(SCREEN_WIDTH-7, SCREEN_HEIGHT/2, SCREEN_WIDTH-1, SCREEN_HEIGHT/2+4, SCREEN_WIDTH-7, SCREEN_HEIGHT/2+8, WHITE);
+            break;
+        }
+        case JKP_SHOWING_BOTH: {
+            // Ambas as mãos na MESMA matriz (jogador esq, dino dir)
+            SpriteData sp = playerSprite(jkp.lanceJogador);
+            SpriteData sd = dinoSprite(jkp.lanceDino);
+            drawSprite(sp.ref, 0, originX, originY, scale);
+            drawSprite(sd.ref, 0, originX, originY, scale);
+            break;
+        }
+        case JKP_ROUND_HAPPY:
+        case JKP_FINAL_HAPPY:
+        case JKP_ROUND_SAD:
+        case JKP_FINAL_SAD: {
+            // Animação fiel a dinoFase1Feliz/Raiva: 4 frames alternados [idle[0], reagir[1], idle[0], reagir[1]] @ 1000ms
+            const PhaseSpriteSet* s = getCurrentPhaseSet();
+            bool feliz = (jkp.fase == JKP_ROUND_HAPPY || jkp.fase == JKP_FINAL_HAPPY);
+            SpriteData reagir = feliz ? s->celebrating : s->losing;
+            uint32_t passo = decorrido / 1000;  // 0..3
+            if (passo > 3) passo = 3;
+            bool mostrarReacao = (passo % 2 == 1);
+            SpriteData usar = mostrarReacao ? reagir : s->idle;
+            uint8_t f = mostrarReacao ? 1 : 0;
+            if (f >= usar.frames) f = 0;
+            drawSprite(usar.ref, f, originX, originY, scale);
+            break;
+        }
+    }
+}
+
 // Tela principal: faixa amarela + dino em tamanho cheio (SCALE=3)
 void drawTelaPrincipal() {
     drawFaixaAmarela();
@@ -236,13 +328,13 @@ void drawTelaSelecao() {
 // Submenu de comida: mostra sprite selectingX da comida atual + nome
 void drawTelaComida() {
     drawFaixaAmarela(COMIDAS[comidaSel].nome);
-    // sprite 16x19 escalado 2x (38x32 aprox). Centralizado
     int scale = 2;
     int spriteW = SPRITE_COLS * scale;
     int spriteH = SPRITE_ROWS * scale;
     int originX = (SCREEN_WIDTH - spriteW) / 2;
     int originY = AREA_AZUL_Y + ((SCREEN_HEIGHT - AREA_AZUL_Y - spriteH) / 2);
-    drawSprite(COMIDAS[comidaSel].icone, 0, originX, originY, scale);
+    SpriteData icone = spriteSelectingFood(comidaSel);
+    drawSprite(icone.ref, 0, originX, originY, scale);
 
     display.fillTriangle(0, SCREEN_HEIGHT / 2 + 4, 6, SCREEN_HEIGHT / 2, 6, SCREEN_HEIGHT / 2 + 8, WHITE);
     display.fillTriangle(SCREEN_WIDTH - 7, SCREEN_HEIGHT / 2, SCREEN_WIDTH - 1, SCREEN_HEIGHT / 2 + 4, SCREEN_WIDTH - 7, SCREEN_HEIGHT / 2 + 8, WHITE);
@@ -406,9 +498,108 @@ bool acaoTemProxima = false;
 unsigned long acaoInicio = 0;
 unsigned long acaoDuracaoMs = 2500;
 unsigned long acaoFrameMs = 1000;  // ms por frame durante a acao
+UIMode telaAnteriorAcao = UI_PRINCIPAL;  // pra onde voltar quando acao terminar
 
-// Helpers pra configurar acao com duracao proporcional aos frames
+// ---------------------------------------------------------------------
+// JOKENPO (pedra/papel/tesoura) — fiel a js/jogoJokenpo/
+// ---------------------------------------------------------------------
+JokenpoState jkp;
+
+void iniciarJokenpo() {
+    jkp.fase = JKP_PREPARING;
+    jkp.rodada = 0;
+    jkp.pontosDino = 0;
+    jkp.pontosJogador = 0;
+    jkp.lanceJogador = 0;
+    jkp.lanceDino = 0;
+    jkp.inicioFase = millis();
+    uiMode = UI_JOKENPO;
+    somTocar(SOM_PLAYING);
+}
+
+// Avalia rodada: marca pontos, sorteia se dino venceu, agenda animacao de reacao (4s)
+// Fiel a compararLances + resultadoDosLances (toca som a cada rodada)
+static void avaliarRodadaJokenpo() {
+    bool empate = (jkp.lanceJogador == jkp.lanceDino);
+    bool dinoVence =
+        (jkp.lanceJogador == 0 && jkp.lanceDino == 2) ||  // papel x tesoura
+        (jkp.lanceJogador == 1 && jkp.lanceDino == 0) ||  // pedra x papel
+        (jkp.lanceJogador == 2 && jkp.lanceDino == 1);    // tesoura x pedra
+
+    if (dinoVence) {
+        jkp.pontosDino++;
+        if (pet.humor < 5) pet.humor++;  // resultadoJokenpo do original
+    } else if (!empate) {
+        jkp.pontosJogador++;
+    }
+    jkp.rodada++;
+
+    if (dinoVence) {
+        jkp.fase = JKP_ROUND_HAPPY;
+        somTocar(SOM_HAPPY);
+    } else {
+        jkp.fase = JKP_ROUND_SAD;
+        somTocar(SOM_SAD);
+    }
+    jkp.inicioFase = millis();
+    saveGravar(clockGetTotalHours());
+}
+
+// Apos a animacao de reacao, decide se segue pra proxima rodada ou final
+static void seguirAposReacao() {
+    if (jkp.rodada >= 5) {
+        if (jkp.pontosDino > jkp.pontosJogador) {
+            jkp.fase = JKP_FINAL_HAPPY;
+            somTocar(SOM_HAPPY);
+        } else {
+            jkp.fase = JKP_FINAL_SAD;
+            somTocar(SOM_SAD);
+        }
+    } else {
+        jkp.fase = JKP_PLAYER_CHOOSING;
+        jkp.lanceJogador = 0;
+    }
+    jkp.inicioFase = millis();
+}
+
+void atualizarJokenpo() {
+    if (uiMode != UI_JOKENPO) return;
+    uint32_t decorrido = millis() - jkp.inicioFase;
+    switch (jkp.fase) {
+        case JKP_PREPARING:
+            if (decorrido >= 3000) {
+                jkp.fase = JKP_PLAYER_CHOOSING;
+                jkp.lanceJogador = 0;
+                jkp.inicioFase = millis();
+            }
+            break;
+        case JKP_SHOWING_BOTH:
+            if (decorrido >= 2000) avaliarRodadaJokenpo();
+            break;
+        case JKP_ROUND_HAPPY:
+        case JKP_ROUND_SAD:
+            // 4 frames alternados a 1000ms = 4s
+            if (decorrido >= 4000) seguirAposReacao();
+            break;
+        case JKP_FINAL_HAPPY:
+        case JKP_FINAL_SAD:
+            // 4s, depois reinicia o jogo (loop infinito do original)
+            if (decorrido >= 4000) {
+                jkp.rodada = 0;
+                jkp.pontosDino = 0;
+                jkp.pontosJogador = 0;
+                jkp.fase = JKP_PREPARING;
+                jkp.inicioFase = millis();
+                somTocar(SOM_PLAYING);
+            }
+            break;
+    }
+}
+
+// Helpers pra configurar acao com duracao proporcional aos frames.
+// telaAnteriorAcao guarda pra onde voltar quando terminar.
 void agendarAcao(SpriteAnim primeira) {
+    if (uiMode != UI_EXECUTANDO_ACAO) telaAnteriorAcao = uiMode;
     acaoAnim = primeira;
     acaoFrameMs = 1000;
     acaoDuracaoMs = (unsigned long)primeira.frames * acaoFrameMs;
@@ -417,6 +608,7 @@ void agendarAcao(SpriteAnim primeira) {
     uiMode = UI_EXECUTANDO_ACAO;
 }
 void agendarAcaoChain(SpriteAnim primeira, SpriteAnim segunda) {
+    if (uiMode != UI_EXECUTANDO_ACAO) telaAnteriorAcao = uiMode;
     acaoAnim = primeira;
     acaoProxima = segunda;
     acaoTemProxima = true;
@@ -428,20 +620,19 @@ void agendarAcaoChain(SpriteAnim primeira, SpriteAnim segunda) {
 
 void iniciarAcao(uint8_t acao) {
     // Fiel ao js/principal/stats.js — comer/beber sobe 1; carinho sobe EDUCACAO; medicar zera medidores
-    SpriteAnim arroto    = { SPRITE_SWALLOWING,  SPRITE_SWALLOWING_FRAMES,  "arrotando" };
-    SpriteAnim festa     = { SPRITE_CELEBRATING, SPRITE_CELEBRATING_FRAMES, "feliz" };
+    const PhaseSpriteSet* s = getCurrentPhaseSet();
+    SpriteAnim arroto = { s->swallowing.ref,  s->swallowing.frames,  "arrotando" };
+    SpriteAnim festa  = { s->celebrating.ref, s->celebrating.frames, "feliz" };
 
     switch (acao) {
         case ACAO_BANHO:
             pet.sujo = false;
-            // bath -> celebrating (dinoFase1Feliz no original)
-            agendarAcaoChain({ SPRITE_BATH, SPRITE_BATH_FRAMES, "banho" }, festa);
+            agendarAcaoChain({ s->bath.ref, s->bath.frames, "banho" }, festa);
             break;
         case ACAO_BEBER:
             if (pet.sede < 4) pet.sede++;
             if (pet.comidaPendente < 200) pet.comidaPendente++;
-            // drinking -> swallowing (arroto, dinoArrotando.js)
-            agendarAcaoChain({ SPRITE_DRINKING, SPRITE_DRINKING_FRAMES, "beber" }, arroto);
+            agendarAcaoChain({ s->drinking.ref, s->drinking.frames, "beber" }, arroto);
             break;
         case ACAO_MEDICAR:
             if (pet.doente) {
@@ -453,15 +644,15 @@ void iniciarAcao(uint8_t acao) {
                 pet.humor = 0;
                 pet.educacao = 0;
             }
-            agendarAcao({ SPRITE_APPLYINGINJECTION, SPRITE_APPLYINGINJECTION_FRAMES, "medicar" });
+            agendarAcao({ s->applyingInjection.ref, s->applyingInjection.frames, "medicar" });
             break;
         case ACAO_CARINHO:
             if (pet.educacao < 4) pet.educacao++;
-            agendarAcao({ SPRITE_CARESSING, SPRITE_CARESSING_FRAMES, "carinho" });
+            agendarAcao({ s->caressing.ref, s->caressing.frames, "carinho" });
             break;
         case ACAO_LER:
             if (pet.educacao < 4) pet.educacao++;
-            agendarAcao({ SPRITE_READING, SPRITE_READING_FRAMES, "ler" });
+            agendarAcao({ s->reading.ref, s->reading.frames, "ler" });
             break;
         case ACAO_ABRIR_LUZ:
             switchEscolha = pet.estadoLuz ? 0 : 1;
@@ -472,9 +663,7 @@ void iniciarAcao(uint8_t acao) {
             uiMode = UI_PAINEL_AC;
             return;
         case ACAO_JOGAR:
-            // Fase 6 implementa jokenpo. Por enquanto so toca o som de inicio.
-            somTocar(SOM_PLAYING);
-            uiMode = UI_PRINCIPAL;
+            iniciarJokenpo();
             return;
         case ACAO_NECESSIDADES:
             necessSel = 0;
@@ -495,8 +684,10 @@ void comerComida(uint8_t idx) {
         case 4: if (pet.dietaVegetal < 255) pet.dietaVegetal++; break;
         // 3 (especial/sorvete) nao conta dieta
     }
-    SpriteAnim arroto = { SPRITE_SWALLOWING, SPRITE_SWALLOWING_FRAMES, "arrotando" };
-    agendarAcaoChain({ c.anim, c.animFrames, c.nome }, arroto);
+    const PhaseSpriteSet* s = getCurrentPhaseSet();
+    SpriteData eat = spriteEating(idx);
+    SpriteAnim arroto = { s->swallowing.ref, s->swallowing.frames, "arrotando" };
+    agendarAcaoChain({ eat.ref, eat.frames, c.nome }, arroto);
     saveGravar(clockGetTotalHours());
 }
 
@@ -596,6 +787,24 @@ void onButtonPressed(uint8_t idx) {
 
         case UI_STATS:
             uiMode = UI_PRINCIPAL;
+            break;
+
+        case UI_JOKENPO:
+            // ESC durante a vez do jogador sai do jogo (habilitarEsc(true))
+            // Em outras fases, todos os botões são ignorados
+            if (jkp.fase == JKP_PLAYER_CHOOSING) {
+                if (idx == 2) jkp.lanceJogador = (jkp.lanceJogador + 2) % 3;       // ESQ
+                else if (idx == 3) jkp.lanceJogador = (jkp.lanceJogador + 1) % 3;  // DIR
+                else if (idx == 4) {  // ENTER: confirma e dino sorteia lance
+                    jkp.lanceDino = random(0, 3);
+                    jkp.fase = JKP_SHOWING_BOTH;
+                    jkp.inicioFase = millis();
+                }
+                else if (idx == 5) {  // ESC: sai do jogo
+                    uiMode = UI_PRINCIPAL;
+                    saveGravar(clockGetTotalHours());
+                }
+            }
             break;
 
         case UI_EXECUTANDO_ACAO:
@@ -730,16 +939,21 @@ uint8_t currentFrame = 0;
 unsigned long lastFrameTime = 0;
 
 SpriteAnim escolherSpriteAtual() {
-    if (!pet.vivo)       return { SPRITE_DEADNEGLECT, SPRITE_DEADNEGLECT_FRAMES, "morto" };
+    if (!pet.vivo) return { SPRITE_DEADNEGLECT, SPRITE_DEADNEGLECT_FRAMES, "morto" };
+
+    const PhaseSpriteSet* s = getCurrentPhaseSet();
     if (pet.dormindo) {
-        if (!pet.estadoLuz) return { SPRITE_SLEEPING_MODE_ORIGINAL, SPRITE_SLEEPING_MODE_ORIGINAL_FRAMES, "dormindo(luz off)" };
-        return { SPRITE_SLEEPING, SPRITE_SLEEPING_FRAMES, "dormindo" };
+        // Luz apagada na fase 1: usa o sleeping_mode_original (frames especiais)
+        if (!pet.estadoLuz && pet.faseEvolucao == 1) {
+            return { SPRITE_SLEEPING_MODE_ORIGINAL, SPRITE_SLEEPING_MODE_ORIGINAL_FRAMES, "dormindo(luz off)" };
+        }
+        return { s->sleeping.ref, s->sleeping.frames, "dormindo" };
     }
-    if (pet.doente)      return { SPRITE_SICK, SPRITE_SICK_FRAMES, "doente" };
-    if (pet.comCalor)    return { SPRITE_HOT, SPRITE_HOT_FRAMES, "calor" };
-    if (pet.comFrio)     return { SPRITE_COLD, SPRITE_COLD_FRAMES, "frio" };
-    if (pet.sujo)        return { SPRITE_DIRTY, SPRITE_DIRTY_FRAMES, "sujo" };
-    return { SPRITE_IDLE, SPRITE_IDLE_FRAMES, "idle" };
+    if (pet.doente)   return { s->sick.ref,  s->sick.frames,  "doente" };
+    if (pet.comCalor) return { s->hot.ref,   s->hot.frames,   "calor" };
+    if (pet.comFrio)  return { s->cold.ref,  s->cold.frames,  "frio" };
+    if (pet.sujo)     return { s->dirty.ref, s->dirty.frames, "sujo" };
+    return { s->idle.ref, s->idle.frames, "idle" };
 }
 
 void atualizarAnimacao() {
@@ -762,7 +976,10 @@ void atualizarAnimacao() {
                     somTocar(SOM_HAPPY);
                 }
             } else {
-                uiMode = UI_PRINCIPAL;
+                // Volta pra tela anterior (igual ao original: comer volta pro submenu de comidas,
+                // outras ações voltam pra tela principal/seleção)
+                uiMode = telaAnteriorAcao;
+                ultimaInteracaoMs = millis();  // reseta timeout de inatividade
                 nova = escolherSpriteAtual();
             }
         } else {
@@ -844,6 +1061,7 @@ void loop() {
     checarHoldReset();
     checarHoldCima();
     atualizarAnimacao();
+    atualizarJokenpo();
     somAtualizar();
 
     // Auto-volta pra tela principal apos 10s sem interacao em qualquer menu
@@ -851,6 +1069,7 @@ void loop() {
     bool emMenu = (uiMode == UI_SELECAO || uiMode == UI_SUBMENU_COMIDA ||
                    uiMode == UI_PAINEL_LUZ || uiMode == UI_PAINEL_AC ||
                    uiMode == UI_NECESSIDADES || uiMode == UI_STATS);
+    // UI_JOKENPO nao volta automaticamente — espera o jogo terminar
     if (emMenu && (millis() - ultimaInteracaoMs) > INATIVIDADE_MS) {
         Serial.println("Timeout sem interacao - voltando para tela principal");
         uiMode = UI_PRINCIPAL;
@@ -897,6 +1116,7 @@ void loop() {
         case UI_PAINEL_LUZ:      drawTelaPainelSwitch("Luz"); break;
         case UI_PAINEL_AC:       drawTelaPainelSwitch("Ar"); break;
         case UI_NECESSIDADES:    drawTelaNecessidades(); break;
+        case UI_JOKENPO:         drawTelaJokenpo(); break;
         case UI_PRINCIPAL:
         case UI_EXECUTANDO_ACAO:
         default:
