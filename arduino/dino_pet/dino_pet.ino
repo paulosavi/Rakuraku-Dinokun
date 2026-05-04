@@ -186,6 +186,7 @@ extern const unsigned long FRAME_MS;
 extern JokenpoState jkp;
 extern UIMode uiMode;
 void iniciarJokenpo();
+void atualizarLedPendencia();
 
 // Desenha icone 32x32 em (x,y)
 void drawIcon32(const uint32_t* bmp, int x, int y) {
@@ -763,6 +764,19 @@ void aplicarSwitchLuz() {
 }
 void aplicarSwitchAC() {
     pet.estadoAC = (switchEscolha == 0) ? 1 : 0;
+
+    // Reset imediato pra zona segura quando o jogador agir num estado extremo:
+    // ligar AC em pet com calor (>30) -> trava em 30
+    // desligar AC em pet com frio (<20) -> trava em 20
+    // A degradacao por hora continua aplicando -0..8 / +0..8 normalmente.
+    if (pet.estadoAC == 1 && pet.temperatura > 30) {
+        pet.temperatura = 30;
+    } else if (pet.estadoAC == 0 && pet.temperatura < 20) {
+        pet.temperatura = 20;
+    }
+    pet.comCalor = (pet.temperatura > 30);
+    pet.comFrio  = (pet.temperatura < 20);
+
     tone(BUZZER, pet.estadoAC ? 1600 : 800, 80);
     saveGravar(clockGetTotalHours());
     uiMode = UI_PRINCIPAL;
@@ -797,6 +811,14 @@ void onButtonPressed(uint8_t idx) {
 
     // qualquer interacao reseta o timer de inatividade
     ultimaInteracaoMs = millis();
+
+    // Pet morto: bloqueia todas as acoes. Só permite ESC (abrir/fechar stats)
+    // Pra renascer, usar hold ESC 5s (tratado em checarHoldReset)
+    if (!pet.vivo) {
+        if (uiMode == UI_PRINCIPAL && idx == 5)      uiMode = UI_STATS;
+        else if (uiMode == UI_STATS)                 uiMode = UI_PRINCIPAL;
+        return;
+    }
 
     switch (uiMode) {
         case UI_PRINCIPAL:
@@ -894,6 +916,20 @@ void handleButtons() {
 // ---------------------------------------------------------------------
 const unsigned long CIMA_HOLD_TICK_MS = 3000;
 unsigned long cimaHoldInicio = 0;
+
+// LED interno do Pico pisca quando o pet tem alguma pendência crítica.
+// Mesma condição usada pra disparar SOM_ALERT (gameLoop.js:108-110) + morto.
+void atualizarLedPendencia() {
+    bool pendencia = !pet.vivo || pet.doente
+                  || pet.comFrio || pet.comCalor
+                  || pet.fome == 0 || pet.sede == 0
+                  || pet.sujo;
+    if (pendencia) {
+        digitalWrite(LED_BUILTIN, ((millis() / 500) & 1) ? HIGH : LOW);
+    } else {
+        digitalWrite(LED_BUILTIN, LOW);
+    }
+}
 
 void checarHoldCima() {
     bool pressionado = (digitalRead(BTN_UP) == LOW);
@@ -1086,6 +1122,8 @@ void setup() {
 
     somInit(BUZZER);
     for (uint8_t i = 0; i < 6; i++) pinMode(BTN_PINS[i], INPUT_PULLUP);
+    pinMode(LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, LOW);
 
     randomSeed(analogRead(A0) ^ micros());
 
@@ -1125,6 +1163,7 @@ void loop() {
     checarHoldCima();
     atualizarAnimacao();
     atualizarJokenpo();
+    atualizarLedPendencia();
     somAtualizar();
 
     // Auto-volta pra tela principal apos 10s sem interacao em qualquer menu
